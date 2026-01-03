@@ -148,7 +148,23 @@
         tasks.push({t:"19:30", l:"약", n:"칼슘/마그네슘/비타D", type:"pill", icon:"💊"});
 
         // 6. 운동
-        tasks.push({t:"운동", l:"운동", n: curD <= 3 ? "가벼운 산책" : "하체+경사걷기 루틴", type:"work", icon:"🏃"});
+        let workoutText = "가벼운 산책";
+        if (curD >= 4) {
+            const daysSinceStart = curD - 4; // Day 4부터 시작
+            const hasStrength = daysSinceStart % 3 === 0; // 3일마다 근력
+            const hasCardio = daysSinceStart % 2 === 0; // 2일마다 유산소
+            
+            if (hasStrength && hasCardio) {
+                workoutText = "하체 근력 + 경사걷기";
+            } else if (hasStrength) {
+                workoutText = "하체 근력운동만";
+            } else if (hasCardio) {
+                workoutText = "경사걷기만";
+            } else {
+                workoutText = "휴식일 (가벼운 산책)";
+            }
+        }
+        tasks.push({t:"운동", l:"운동", n: workoutText, type:"work", icon:"🏃"});
 
         let html = `<div class="card-title"><span style="font-weight:900;">Day ${curD} 루틴</span><span class="phase-label" style="background:var(--w${curW}); color:white;">${phase}</span></div>`;
         
@@ -165,12 +181,35 @@
         });
 
         if (curD >= 4) {
-            html += `<div class="workout-guide"><div class="guide-header">🏆 실전 루틴 가이드</div><div class="guide-content">
+            const daysSinceStart = curD - 4;
+            const hasStrength = daysSinceStart % 3 === 0;
+            const hasCardio = daysSinceStart % 2 === 0;
+            
+            let guideContent = '';
+            
+            if (hasStrength && hasCardio) {
+                guideContent = `
                 <div class="step-box"><div class="step-title"><span>1</span> 준비 운동</div><div class="step-desc">속도 4.0으로 5분간 천천히 걷기</div></div>
                 <div class="step-box"><div class="step-title"><span>2</span> 근력 운동</div><div class="step-desc">하체 머신(익스텐션/컬/레그프레스) 각 3세트</div></div>
                 <div class="step-box"><div class="step-title"><span>3</span> 유산소</div><div class="step-desc">경사 5~8도 / 속도 4.5 이상 고강도 30분</div></div>
-                <div class="step-box"><div class="step-title"><span>4</span> 마무리</div><div class="step-desc">스트레칭으로 하체 근육 이완</div></div>
-            </div></div>`;
+                <div class="step-box"><div class="step-title"><span>4</span> 마무리</div><div class="step-desc">스트레칭으로 하체 근육 이완</div></div>`;
+            } else if (hasStrength) {
+                guideContent = `
+                <div class="step-box"><div class="step-title"><span>1</span> 준비 운동</div><div class="step-desc">가벼운 관절 스트레칭 5분</div></div>
+                <div class="step-box"><div class="step-title"><span>2</span> 근력 운동</div><div class="step-desc">하체 머신(익스텐션/컬/레그프레스) 각 3세트</div></div>
+                <div class="step-box"><div class="step-title"><span>3</span> 마무리</div><div class="step-desc">스트레칭으로 하체 근육 이완 10분</div></div>`;
+            } else if (hasCardio) {
+                guideContent = `
+                <div class="step-box"><div class="step-title"><span>1</span> 준비 운동</div><div class="step-desc">속도 4.0으로 5분간 천천히 걷기</div></div>
+                <div class="step-box"><div class="step-title"><span>2</span> 유산소</div><div class="step-desc">경사 5~8도 / 속도 4.5 이상 고강도 30분</div></div>
+                <div class="step-box"><div class="step-title"><span>3</span> 마무리</div><div class="step-desc">가벼운 스트레칭 5분</div></div>`;
+            } else {
+                guideContent = `
+                <div class="step-box"><div class="step-title"><span>🌿</span> 휴식일</div><div class="step-desc">30분 가벼운 산책으로 혈액순환 유지</div></div>
+                <div class="step-box"><div class="step-title"><span>💪</span> 회복에 집중</div><div class="step-desc">근육 회복을 위한 충분한 휴식</div></div>`;
+            }
+            
+            html += `<div class="workout-guide"><div class="guide-header">🏆 실전 루틴 가이드</div><div class="guide-content">${guideContent}</div></div>`;
         }
 
         card.innerHTML = html;
@@ -199,4 +238,5 @@
 </script>
 </body>
 </html>
+
 
