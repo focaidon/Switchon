@@ -10,11 +10,13 @@
         :root {
             --w1: #2ECC71; --w2: #F1C40F; --w3: #3498DB; --w4: #9B59B6;
             --bg: #F4F7F6; --text: #2C3E50;
+            --meal-bg: #E8F5E9; --meal-txt: #2E7D32;
+            --pill-bg: #FFF3E0; --pill-txt: #EF6C00;
+            --work-bg: #E3F2FD; --work-txt: #1565C0;
         }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
         
-        /* UI Styles (이전과 동일하지만 데이터 로딩 중 표시를 위해 일부 수정) */
         .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; }
         .progress-container { flex: 1; margin-left: 15px; background: #DDD; height: 6px; border-radius: 3px; }
         #prog-bar { height: 100%; border-radius: 3px; transition: 0.3s; width: 0%; }
@@ -35,10 +37,16 @@
         .card-title { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #F4F7F6; padding-bottom: 10px; margin-bottom: 12px; }
         .phase-label { font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 5px; }
         
-        .task { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #FAFAFA; cursor: pointer; }
-        .task input { width: 18px; height: 18px; margin-right: 12px; accent-color: #333; }
-        .task-txt { font-size: 14px; font-weight: 600; }
-        .time-tag { font-size: 10px; color: #999; width: 45px; flex-shrink: 0; }
+        .task { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #FAFAFA; cursor: pointer; }
+        .task input { width: 20px; height: 20px; margin-right: 12px; accent-color: #333; flex-shrink: 0; }
+        .time-tag { font-size: 10px; color: #999; width: 42px; flex-shrink: 0; }
+        
+        /* 배지 스타일 */
+        .badge { font-size: 10px; padding: 3px 6px; border-radius: 6px; margin-right: 8px; font-weight: 800; flex-shrink: 0; display: inline-flex; align-items: center; gap: 3px; }
+        .badge-meal { background: var(--meal-bg); color: var(--meal-txt); }
+        .badge-pill { background: var(--pill-bg); color: var(--pill-txt); }
+        .badge-work { background: var(--work-bg); color: var(--work-txt); }
+        .task-txt { font-size: 14px; font-weight: 600; color: #334155; }
 
         .workout-guide { margin-top: 15px; background: #F8FAFC; border-radius: 12px; overflow: hidden; border: 1px solid #E2E8F0; }
         .guide-header { padding: 12px; background: #334155; color: white; font-size: 13px; font-weight: 800; }
@@ -70,7 +78,7 @@
 <button class="save-btn" onclick="saveToCloud()">클라우드에 동기화 저장</button>
 
 <script>
-    // [중요] Firebase 콘솔에서 복사한 설정을 여기에 붙여넣으세요!
+    // Firebase 설정
     const firebaseConfig = {
         apiKey: "AIzaSyDtVClk4DN0GL8iTIIk6hJm4rxx0nWABvg",
         authDomain: "switchon-db9a9.firebaseapp.com",
@@ -79,22 +87,20 @@
         storageBucket: "switchon-db9a9.firebasestorage.app",
         messagingSenderId: "618182666518",
         appId: "1:618182666518:web:40e0e2bede5a8d2b2b4837",
-	measurementId: "G-DLPF3D62ND"
+        measurementId: "G-DLPF3D62ND"
     };
 
-    // Firebase 초기화
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
     let curW = 1; let curD = 1;
-    let cloudData = {}; // 클라우드에서 받아온 데이터를 담을 객체
+    let cloudData = {};
     const info = ["", "1주: 몸의 스위치 켜기", "2주: 인슐린 저항성 개선", "3주: 체지방 감량 가속", "4주: 체지방 감량 가속"];
 
-    // 페이지 로드 시 클라우드 데이터 가져오기
     function init() {
         db.ref('tracker_data').on('value', (snapshot) => {
             cloudData = snapshot.val() || {};
-            setWeek(1); // 데이터 로드 후 화면 렌더링
+            setWeek(1);
         });
     }
 
@@ -110,7 +116,6 @@
         const grid = document.getElementById('day-grid'); grid.innerHTML = '';
         for (let i = (curW-1)*7 + 1; i <= curW*7; i++) {
             const btn = document.createElement('div');
-            // 해당 날짜의 모든 항목이 체크되었는지 확인
             const isDone = checkDayDone(i);
             btn.className = `d-btn ${i === curD ? 'active' : ''} ${isDone ? 'done' : ''}`;
             btn.innerHTML = `<div style="font-size:10px; color:#888;">Day</div><div style="font-size:14px;">${i}</div><div class="dot"></div>`;
@@ -124,25 +129,34 @@
         const card = document.getElementById('task-card');
         const phase = curD <= 3 ? "집중기" : (curD <= 14 ? "도입기" : "가속기");
         
+        // 항목별 타입 정의: meal(식단), pill(약), work(운동)
         let tasks = [
-            {t:"08:00", n:"유산균/코큐텐(공복)"}, {t:"08:30", n:"아침 쉐이크"},
-            {t:"12:00", n: curD <= 3 ? "점심 쉐이크" : "현미밥 1/2공기 식사"}
+            {t:"08:00", n:"유산균/코큐텐(공복)", type:"pill", icon:"💊"},
+            {t:"08:30", n:"아침 쉐이크", type:"meal", icon:"🥤"},
+            {t:"12:00", n: curD <= 3 ? "점심 쉐이크" : "현미밥 1/2공기 식사", type:"meal", icon:"🥗"}
         ];
-        if(curD >= 4) tasks.push({t:"12:30", n:"종합/오메가/비타C"});
-        tasks.push({t:"15:00", n:"오후 쉐이크"});
-        tasks.push({t:"19:00", n: curD <= 7 ? "저녁 쉐이크" : "단백질 식사(밥X)"});
-        tasks.push({t:"19:30", n:"칼슘/마그네슘/비타D"});
-        tasks.push({t:"운동", n: curD <= 3 ? "가벼운 산책" : "하체+경사걷기 루틴"});
+        if(curD >= 4) tasks.push({t:"12:30", n:"종합/오메가/비타C", type:"pill", icon:"💊"});
+        tasks.push({t:"15:00", n:"오후 쉐이크", type:"meal", icon:"🥤"});
+        tasks.push({t:"19:00", n: curD <= 7 ? "저녁 쉐이크" : "단백질 식사(밥X)", type:"meal", icon:"🍗"});
+        tasks.push({t:"19:30", n:"칼슘/마그네슘/비타D", type:"pill", icon:"💊"});
+        tasks.push({t:"운동", n: curD <= 3 ? "가벼운 산책" : "하체+경사걷기 루틴", type:"work", icon:"🏃"});
 
         let html = `<div class="card-title"><span style="font-weight:900;">Day ${curD} 루틴</span><span class="phase-label" style="background:var(--w${curW}); color:white;">${phase}</span></div>`;
         
         tasks.forEach(tk => {
             const id = `d${curD}-${tk.n.replace(/[^a-zA-Z가-힣]/g,'')}`;
             const isChecked = cloudData[id] ? 'checked' : '';
-            html += `<label class="task"><span class="time-tag">${tk.t}</span><input type="checkbox" id="${id}" onchange="updateProg()" ${isChecked}><span class="task-txt">${tk.n}</span></label>`;
+            const typeLabel = tk.type === 'meal' ? '식단' : tk.type === 'pill' ? '약' : '운동';
+            
+            html += `
+            <label class="task">
+                <span class="time-tag">${tk.t}</span>
+                <input type="checkbox" id="${id}" onchange="updateProg()" ${isChecked}>
+                <span class="badge badge-${tk.type}">${tk.icon} ${typeLabel}</span>
+                <span class="task-txt">${tk.n}</span>
+            </label>`;
         });
 
-        // 운동 가이드 (Day 4부터 항상 노출)
         if (curD >= 4) {
             html += `<div class="workout-guide"><div class="guide-header">🏋️ 실전 루틴</div><div class="guide-content">
                 <div class="step-box"><div class="step-title"><span>1</span> 준비 운동</div><div class="step-desc">속도 4.0 걷기</div></div>
