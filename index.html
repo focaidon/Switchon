@@ -13,56 +13,49 @@
             --meal-bg: #E8F5E9; --meal-txt: #2E7D32;
             --pill-bg: #FFF3E0; --pill-txt: #EF6C00;
             --work-bg: #E3F2FD; --work-txt: #1565C0;
+            --fast-bg: #FFEBEE; --fast-txt: #C62828;
         }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
-        
         .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; }
         .progress-container { flex: 1; margin-left: 15px; background: #DDD; height: 6px; border-radius: 3px; }
         #prog-bar { height: 100%; border-radius: 3px; transition: 0.3s; width: 0%; }
-
         .week-tabs { display: flex; gap: 5px; margin-bottom: 10px; }
         .w-tab { flex: 1; padding: 8px; border-radius: 8px; font-size: 11px; font-weight: 800; text-align: center; cursor: pointer; opacity: 0.6; }
         .w-tab.active { opacity: 1; color: white; }
         .w-tab:nth-child(1) { background: var(--w1); } .w-tab:nth-child(2) { background: var(--w2); }
         .w-tab:nth-child(3) { background: var(--w3); } .w-tab:nth-child(4) { background: var(--w4); }
-
         .day-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 15px; }
         .d-btn { padding: 10px 0; background: white; border-radius: 8px; text-align: center; border: 1px solid #EEE; cursor: pointer; }
         .d-btn.active { border: 2px solid #333; font-weight: 800; }
         .d-btn .dot { width: 4px; height: 4px; border-radius: 50%; background: #CCC; margin: 4px auto 0; }
         .d-btn.done .dot { background: var(--w1); }
-
         .card { background: white; border-radius: 15px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 100px; }
         .card-title { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #F4F7F6; padding-bottom: 10px; margin-bottom: 12px; }
         .phase-label { font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 5px; }
-        
         .task { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #FAFAFA; cursor: pointer; }
         .task input { width: 20px; height: 20px; margin-right: 12px; accent-color: #333; flex-shrink: 0; }
         .time-tag { font-size: 10px; color: #999; width: 42px; flex-shrink: 0; }
-        
-        /* 배지 스타일 */
         .badge { font-size: 10px; padding: 3px 6px; border-radius: 6px; margin-right: 8px; font-weight: 800; flex-shrink: 0; display: inline-flex; align-items: center; gap: 3px; }
         .badge-meal { background: var(--meal-bg); color: var(--meal-txt); }
         .badge-pill { background: var(--pill-bg); color: var(--pill-txt); }
         .badge-work { background: var(--work-bg); color: var(--work-txt); }
+        .badge-fast { background: var(--fast-bg); color: var(--fast-txt); }
         .task-txt { font-size: 14px; font-weight: 600; color: #334155; }
-
-        .workout-guide { margin-top: 15px; background: #F8FAFC; border-radius: 12px; overflow: hidden; border: 1px solid #E2E8F0; }
-        .guide-header { padding: 12px; background: #334155; color: white; font-size: 13px; font-weight: 800; }
-        .guide-content { padding: 15px; font-size: 13px; }
-        .step-box { margin-bottom: 15px; }
-        .step-title { font-weight: 800; color: #1E293B; margin-bottom: 5px; display: flex; align-items: center; }
-        .step-title span { background: #333; color: white; font-size: 10px; padding: 1px 5px; border-radius: 3px; margin-right: 6px; }
-        .step-desc { color: #64748B; font-size: 12px; line-height: 1.5; padding-left: 32px; }
-
+        .workout-guide { margin-top: 15px; background: #334155; border-radius: 12px; overflow: hidden; color: white; }
+        .guide-header { padding: 12px; font-size: 13px; font-weight: 800; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .guide-content { padding: 15px; font-size: 12px; }
+        .step-box { margin-bottom: 12px; }
+        .step-title { font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; }
+        .step-title span { background: white; color: #333; font-size: 10px; padding: 1px 5px; border-radius: 3px; margin-right: 6px; }
+        .step-desc { color: #CBD5E1; padding-left: 28px; line-height: 1.4; }
         .save-btn { position: fixed; bottom: 20px; left: 15px; right: 15px; background: #333; color: white; padding: 18px; border-radius: 12px; text-align: center; font-weight: 700; border: none; z-index: 1000; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <div id="week-title" style="font-size: 16px; font-weight: 900;">데이터 연결 중...</div>
+    <div id="week-title" style="font-size: 16px; font-weight: 900;">연결 중...</div>
     <div class="progress-container"><div id="prog-bar"></div></div>
 </div>
 
@@ -75,10 +68,9 @@
 
 <div class="day-grid" id="day-grid"></div>
 <div class="card" id="task-card"></div>
-<button class="save-btn" onclick="saveToCloud()">클라우드에 동기화 저장</button>
+<button class="save-btn" onclick="saveToCloud()">오늘의 성과 저장하기</button>
 
 <script>
-    // Firebase 설정
     const firebaseConfig = {
         apiKey: "AIzaSyDtVClk4DN0GL8iTIIk6hJm4rxx0nWABvg",
         authDomain: "switchon-db9a9.firebaseapp.com",
@@ -128,41 +120,56 @@
     function renderTasks() {
         const card = document.getElementById('task-card');
         const phase = curD <= 3 ? "집중기" : (curD <= 14 ? "도입기" : "가속기");
-        
-        // 항목별 타입 정의: meal(식단), pill(약), work(운동)
-        let tasks = [
-            {t:"08:00", n:"유산균/코큐텐(공복)", type:"pill", icon:"💊"},
-            {t:"08:30", n:"아침 쉐이크", type:"meal", icon:"🥤"},
-            {t:"12:00", n: curD <= 3 ? "점심 쉐이크" : "현미밥 1/2공기 식사", type:"meal", icon:"🥗"}
-        ];
-        if(curD >= 4) tasks.push({t:"12:30", n:"종합/오메가/비타C", type:"pill", icon:"💊"});
-        tasks.push({t:"15:00", n:"오후 쉐이크", type:"meal", icon:"🥤"});
-        tasks.push({t:"19:00", n: curD <= 7 ? "저녁 쉐이크" : "단백질 식사(밥X)", type:"meal", icon:"🍗"});
-        tasks.push({t:"19:30", n:"칼슘/마그네슘/비타D", type:"pill", icon:"💊"});
-        tasks.push({t:"운동", n: curD <= 3 ? "가벼운 산책" : "하체+경사걷기 루틴", type:"work", icon:"🏃"});
+        const dayInWeek = (curD - 1) % 7;
+
+        let isFastStart = (curW === 2 && dayInWeek === 0) || (curW >= 3 && (dayInWeek === 0 || dayInWeek === 4));
+        let isFastEnd = (curW === 2 && dayInWeek === 1) || (curW >= 3 && (dayInWeek === 1 || dayInWeek === 5));
+
+        let tasks = [];
+        // 1. 공복 약
+        tasks.push({t:"08:00", l:"약", n:"유산균/코큐텐(공복)", type:"pill", icon:"💊"});
+
+        // 2. 아침
+        let morningMeal = isFastEnd ? "단식 중 (물 많이)" : "쉐이크";
+        tasks.push({t:"08:30", l:"아침", n: morningMeal, type: isFastEnd ? "fast" : "meal", icon: isFastEnd ? "🚫" : "🍚"});
+
+        // 3. 점심 및 점심 약
+        let lunchMeal = isFastEnd ? "단식 중 (물 많이)" : (curD <= 3 ? "쉐이크" : "현미밥 1/2공기 식사");
+        tasks.push({t:"12:00", l:"점심", n: lunchMeal, type: isFastEnd ? "fast" : "meal", icon: isFastEnd ? "🚫" : "🍚"});
+        if(curD >= 4) tasks.push({t:"12:30", l:"약", n:"종합/오메가/비타C", type:"pill", icon:"💊"});
+
+        // 4. 간식
+        let snackMeal = isFastEnd ? "단식 중 (물 많이)" : "쉐이크";
+        tasks.push({t:"15:00", l:"간식", n: snackMeal, type: isFastEnd ? "fast" : "meal", icon: isFastEnd ? "🚫" : "🍚"});
+
+        // 5. 저녁 및 저녁 약
+        let dinnerMeal = isFastStart ? "단식 시작 (물 많이)" : (curD <= 7 ? "쉐이크" : (isFastEnd ? "단백질 식사 (단식 종료)" : "단백질 식사(밥X)"));
+        tasks.push({t:"19:00", l:"저녁", n: dinnerMeal, type: isFastStart ? "fast" : "meal", icon: isFastStart ? "🚫" : "🍚"});
+        tasks.push({t:"19:30", l:"약", n:"칼슘/마그네슘/비타D", type:"pill", icon:"💊"});
+
+        // 6. 운동
+        tasks.push({t:"운동", l:"운동", n: curD <= 3 ? "가벼운 산책" : "하체+경사걷기 루틴", type:"work", icon:"🏃"});
 
         let html = `<div class="card-title"><span style="font-weight:900;">Day ${curD} 루틴</span><span class="phase-label" style="background:var(--w${curW}); color:white;">${phase}</span></div>`;
         
         tasks.forEach(tk => {
-            const id = `d${curD}-${tk.n.replace(/[^a-zA-Z가-힣]/g,'')}`;
+            const id = `d${curD}-${tk.l}-${tk.n.replace(/[^a-zA-Z가-힣]/g,'')}`;
             const isChecked = cloudData[id] ? 'checked' : '';
-            const typeLabel = tk.type === 'meal' ? '식단' : tk.type === 'pill' ? '약' : '운동';
-            
             html += `
             <label class="task">
                 <span class="time-tag">${tk.t}</span>
                 <input type="checkbox" id="${id}" onchange="updateProg()" ${isChecked}>
-                <span class="badge badge-${tk.type}">${tk.icon} ${typeLabel}</span>
+                <span class="badge badge-${tk.type}">${tk.icon} ${tk.l}</span>
                 <span class="task-txt">${tk.n}</span>
             </label>`;
         });
 
         if (curD >= 4) {
-            html += `<div class="workout-guide"><div class="guide-header">🏋️ 실전 루틴</div><div class="guide-content">
-                <div class="step-box"><div class="step-title"><span>1</span> 준비 운동</div><div class="step-desc">속도 4.0 걷기</div></div>
-                <div class="step-box"><div class="step-title"><span>2</span> 하체 머신</div><div class="step-desc">익스텐션/컬/이너아웃 (3세트)</div></div>
-                <div class="step-box"><div class="step-title"><span>3</span> 경사 걷기</div><div class="step-desc">경사 5~8 / 속도 4.0~4.5</div></div>
-                <div class="step-box"><div class="step-title"><span>4</span> 스트레칭</div><div class="step-desc">하체 위주 마무리</div></div>
+            html += `<div class="workout-guide"><div class="guide-header">🏆 실전 루틴 가이드</div><div class="guide-content">
+                <div class="step-box"><div class="step-title"><span>1</span> 준비 운동</div><div class="step-desc">속도 4.0으로 5분간 천천히 걷기</div></div>
+                <div class="step-box"><div class="step-title"><span>2</span> 근력 운동</div><div class="step-desc">하체 머신(익스텐션/컬/레그프레스) 각 3세트</div></div>
+                <div class="step-box"><div class="step-title"><span>3</span> 유산소</div><div class="step-desc">경사 5~8도 / 속도 4.5 이상 고강도 30분</div></div>
+                <div class="step-box"><div class="step-title"><span>4</span> 마무리</div><div class="step-desc">스트레칭으로 하체 근육 이완</div></div>
             </div></div>`;
         }
 
@@ -179,22 +186,15 @@
     }
 
     function saveToCloud() {
-        document.querySelectorAll('input[type="checkbox"]').forEach(c => {
-            cloudData[c.id] = c.checked;
-        });
-        db.ref('tracker_data').set(cloudData).then(() => {
-            alert('클라우드 저장 및 동기화 완료!');
-            renderGrid();
-        });
+        document.querySelectorAll('input[type="checkbox"]').forEach(c => { cloudData[c.id] = c.checked; });
+        db.ref('tracker_data').set(cloudData).then(() => { alert('저장 완료!'); renderGrid(); });
     }
 
     function checkDayDone(day) {
         const prefix = `d${day}-`;
         const dayTasks = Object.keys(cloudData).filter(k => k.startsWith(prefix));
-        if(dayTasks.length === 0) return false;
-        return dayTasks.every(k => cloudData[k] === true);
+        return dayTasks.length > 0 && dayTasks.every(k => cloudData[k] === true);
     }
-
     window.onload = init;
 </script>
 </body>
