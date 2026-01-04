@@ -15,7 +15,7 @@
             --work-bg: #E3F2FD; --work-txt: #1565C0;
             --fast-bg: #FFEBEE; --fast-txt: #C62828;
         }
-        /* 터치 스와이프 시 텍스트 선택 방지 및 터치 동작 최적화 */
+        /* 사파리 스와이프 및 터치 최적화 */
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: pan-y; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; overflow-x: hidden; }
         .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; }
@@ -90,44 +90,61 @@
     let cloudData = {};
     const info = ["", "1주: 몸의 스위치 켜기", "2주: 인슐린 저항성 개선", "3주: 체지방 감량 가속", "4주: 체지방 감량 가속"];
 
-    // --- 스와이프 구현 코드 ---
+    // --- 사파리 대응 강화 스와이프 로직 ---
     let touchstartX = 0;
+    let touchstartY = 0;
     let touchendX = 0;
+    let touchendY = 0;
 
     function handleGesture() {
-        const threshold = 70; // 스와이프 민감도
-        if (touchendX < touchstartX - threshold) {
-            // 왼쪽으로 스와이프 -> 다음 날짜
-            if (curD < 28) {
-                curD++;
-                if (curD > curW * 7) setWeek(curW + 1, false);
-                else renderGrid();
-            }
-        }
-        if (touchendX > touchstartX + threshold) {
-            // 오른쪽으로 스와이프 -> 이전 날짜
-            if (curD > 1) {
-                curD--;
-                if (curD < (curW - 1) * 7 + 1) setWeek(curW - 1, false);
-                else renderGrid();
+        const threshold = 60; // 좌우 스와이프 민감도
+        const xDiff = touchendX - touchstartX;
+        const yDiff = touchendY - touchstartY;
+
+        // 수평 이동 거리가 수직 이동 거리보다 확실히 클 때만 작동 (세로 스크롤 방해 금지)
+        if (Math.abs(xDiff) > Math.abs(yDiff) && Math.abs(xDiff) > threshold) {
+            if (xDiff < 0) { // 왼쪽 스와이프 (Next)
+                if (curD < 28) {
+                    curD++;
+                    const targetWeek = Math.ceil(curD / 7);
+                    if (targetWeek !== curW) setWeek(targetWeek, false);
+                    else renderGrid();
+                }
+            } else { // 오른쪽 스와이프 (Prev)
+                if (curD > 1) {
+                    curD--;
+                    const targetWeek = Math.ceil(curD / 7);
+                    if (targetWeek !== curW) setWeek(targetWeek, false);
+                    else renderGrid();
+                }
             }
         }
     }
 
-    document.addEventListener('touchstart', e => { touchstartX = e.changedTouches[0].screenX; }, false);
-    document.addEventListener('touchend', e => { touchendX = e.changedTouches[0].screenX; handleGesture(); }, false);
-    // ------------------------
+    document.addEventListener('touchstart', e => {
+        touchstartX = e.changedTouches[0].screenX;
+        touchstartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    document.addEventListener('touchend', e => {
+        touchendX = e.changedTouches[0].screenX;
+        touchendY = e.changedTouches[0].screenY;
+        handleGesture();
+    }, { passive: true });
+    // ------------------------------------
 
     function init() {
         db.ref('tracker_data').on('value', (snapshot) => {
             cloudData = snapshot.val() || {};
-            // 초기 로딩 시에만 1주차로 설정 (이미 보고 있던 날짜를 유지하기 위함)
-            if(curD === 1) setWeek(1);
-            else renderGrid();
+            // 데이터 로드 시 현재 페이지를 유지하기 위해 분기 처리
+            if(document.getElementById('day-grid').innerHTML === '') {
+                setWeek(1);
+            } else {
+                renderGrid();
+            }
         });
     }
 
-    // resetDay 파라미터 추가: 주차 탭 클릭 시에만 첫날로 이동
     function setWeek(w, resetDay = true) {
         if (w < 1 || w > 4) return;
         curW = w; 
@@ -228,12 +245,12 @@
     }
 
     function saveToCloud() {
-        // 현재 화면의 체크박스 상태를 cloudData에 반영
+        // 현재 화면의 체크박스 상태 수집
         document.querySelectorAll('input[type="checkbox"]').forEach(c => { cloudData[c.id] = c.checked; });
         
         db.ref('tracker_data').set(cloudData).then(() => { 
             alert('저장 완료!'); 
-            // ❗ 중요: 페이지를 새로고침하지 않고 renderGrid()만 호출하여 현재 위치(Day/스크롤) 유지
+            // ❗ 저장 후 초기화 없이 현재 상태만 다시 그려서 위치 유지
             renderGrid(); 
         });
     }
