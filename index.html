@@ -222,11 +222,11 @@
             const hasCardio = daysSinceStart % 2 === 0;
             let guideContent = '';
             if (hasStrength && hasCardio) {
-                guideContent = `<div class="step-box"><div class="step-title"><span>1</span> 준비 운동</div><div class="step-desc">속도 4.0으로 5분간 천천히 걷기</div></div><div class="step-box"><div class="step-title"><span>2</span> 근력 운동</div><div class="step-desc">하체 머신(익스텐션/컬/레그프레스) 각 3세트</div></div><div class="step-box"><div class="step-title"><span>3</span> 유산소</div><div class="step-desc">경사 5~8도 / 속도 4.5 이상 고강도 30분</div></div><div class="step-box"><div class="step-title"><span>4</span> 마무리</div><div class="step-desc">스트레칭으로 하체 근육 이완</div></div>`;
+                guideContent = `<div class="step-box"><div class="step-title"><span>1</span> 준비 운동</div><div class="step-desc">속도 4.0으로 5분간 천천히 걷기</div></div><div class="step-box"><div class="step-title"><span>2</span> 근력 운동</div><div class="step-desc">하체 머신(익스텐션/컬/레그프레스) 각 3세트</div></div><div class="step-box"><div class="step-title"><span>3</span> 유산소</div><div class="step-desc">속도 4 (3분) / 속도 7 (2분) 6세트 (30분)</div></div><div class="step-box"><div class="step-title"><span>4</span> 마무리</div><div class="step-desc">스트레칭으로 하체 근육 이완</div></div>`;
             } else if (hasStrength) {
                 guideContent = `<div class="step-box"><div class="step-title"><span>1</span> 준비 운동</div><div class="step-desc">가벼운 관절 스트레칭 5분</div></div><div class="step-box"><div class="step-title"><span>2</span> 근력 운동</div><div class="step-desc">하체 머신(익스텐션/컬/레그프레스) 각 3세트</div></div><div class="step-box"><div class="step-title"><span>3</span> 마무리</div><div class="step-desc">스트레칭으로 하체 근육 이완 10분</div></div>`;
             } else if (hasCardio) {
-                guideContent = `<div class="step-box"><div class="step-title"><span>1</span> 준비 운동</div><div class="step-desc">속도 4.0으로 5분간 천천히 걷기</div></div><div class="step-box"><div class="step-title"><span>2</span> 유산소</div><div class="step-desc">경사 5~8도 / 속도 4.5 이상 고강도 30분</div></div><div class="step-box"><div class="step-title"><span>3</span> 마무리</div><div class="step-desc">가벼운 스트레칭 5분</div></div>`;
+                guideContent = `<div class="step-box"><div class="step-title"><span>1</span> 준비 운동</div><div class="step-desc">속도 4.0으로 5분간 천천히 걷기</div></div><div class="step-box"><div class="step-title"><span>2</span> 유산소</div><div class="step-desc">속도 4 (3분) / 속도 7 (2분) 6세트 (30분)</div></div><div class="step-box"><div class="step-title"><span>3</span> 마무리</div><div class="step-desc">가벼운 스트레칭 5분</div></div>`;
             } else {
                 guideContent = `<div class="step-box"><div class="step-title"><span>🌿</span> 휴식일</div><div class="step-desc">30분 가벼운 산책으로 혈액순환 유지</div></div><div class="step-box"><div class="step-title"><span>💪</span> 회복에 집중</div><div class="step-desc">근육 회복을 위한 충분한 휴식</div></div>`;
             }
@@ -264,3 +264,4 @@
 </script>
 </body>
 </html>
+
