@@ -195,9 +195,9 @@
             const daysSinceStart = curD - 4;
             const hasStrength = daysSinceStart % 3 === 0;
             const hasCardio = daysSinceStart % 2 === 0;
-            if (hasStrength && hasCardio) workoutText = "하체 근력 + 경사걷기";
+            if (hasStrength && hasCardio) workoutText = "하체 근력 + 유산소";
             else if (hasStrength) workoutText = "하체 근력운동만";
-            else if (hasCardio) workoutText = "경사걷기만";
+            else if (hasCardio) workoutText = "유산소만";
             else workoutText = "휴식일 (가벼운 산책)";
         }
         tasks.push({t:"운동", l:"운동", n: workoutText, type:"work", icon:"🏃"});
