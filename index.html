@@ -193,7 +193,7 @@
         let workoutText = "가벼운 산책";
         if (curD >= 4) {
             const daysSinceStart = curD - 4;
-            const hasStrength = daysSinceStart % 3 === 0;
+            const hasStrength = daysSinceStart % 4 === 0;
             const hasCardio = daysSinceStart % 2 === 0;
             if (hasStrength && hasCardio) workoutText = "하체 근력 + 유산소";
             else if (hasStrength) workoutText = "하체 근력운동만";
@@ -218,7 +218,7 @@
 
         if (curD >= 4) {
             const daysSinceStart = curD - 4;
-            const hasStrength = daysSinceStart % 3 === 0;
+            const hasStrength = daysSinceStart % 4 === 0;
             const hasCardio = daysSinceStart % 2 === 0;
             let guideContent = '';
             if (hasStrength && hasCardio) {
@@ -264,4 +264,5 @@
 </script>
 </body>
 </html>
+
 
