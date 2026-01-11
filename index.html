@@ -178,17 +178,17 @@
         let isFastEnd = (curW === 2 && dayInWeek === 1) || (curW >= 3 && (dayInWeek === 1 || dayInWeek === 5));
 
         let tasks = [];
-        tasks.push({t:"08:00", l:"약", n:"유산균/코큐텐(공복)", type:"pill", icon:"💊"});
+        tasks.push({t:"09:30", l:"약", n:"유산균/코큐텐(공복)", type:"pill", icon:"💊"});
         let morningMeal = isFastEnd ? "단식 중 (물 많이)" : "쉐이크";
-        tasks.push({t:"08:30", l:"아침", n: morningMeal, type: isFastEnd ? "fast" : "meal", icon: isFastEnd ? "🚫" : "🍚"});
+        tasks.push({t:"10:00", l:"아침", n: morningMeal, type: isFastEnd ? "fast" : "meal", icon: isFastEnd ? "🚫" : "🍚"});
         let lunchMeal = isFastEnd ? "단식 중 (물 많이)" : (curD <= 3 ? "쉐이크" : "현미밥 1/2공기 식사");
-        tasks.push({t:"12:00", l:"점심", n: lunchMeal, type: isFastEnd ? "fast" : "meal", icon: isFastEnd ? "🚫" : "🍚"});
-        if(curD >= 4) tasks.push({t:"12:30", l:"약", n:"종합/오메가/비타C", type:"pill", icon:"💊"});
+        tasks.push({t:"13:00", l:"점심", n: lunchMeal, type: isFastEnd ? "fast" : "meal", icon: isFastEnd ? "🚫" : "🍚"});
+        if(curD >= 4) tasks.push({t:"13:30", l:"약", n:"종합/오메가/비타C", type:"pill", icon:"💊"});
         let snackMeal = isFastEnd ? "단식 중 (물 많이)" : "쉐이크";
-        tasks.push({t:"15:00", l:"간식", n: snackMeal, type: isFastEnd ? "fast" : "meal", icon: isFastEnd ? "🚫" : "🍚"});
+        tasks.push({t:"17:00", l:"간식", n: snackMeal, type: isFastEnd ? "fast" : "meal", icon: isFastEnd ? "🚫" : "🍚"});
         let dinnerMeal = isFastStart ? "단식 시작 (물 많이)" : (curD <= 7 ? "쉐이크" : (isFastEnd ? "단백질 식사 (단식 종료)" : "단백질 식사(밥X)"));
-        tasks.push({t:"19:00", l:"저녁", n: dinnerMeal, type: isFastStart ? "fast" : "meal", icon: isFastStart ? "🚫" : "🍚"});
-        tasks.push({t:"19:30", l:"약", n:"칼슘/마그네슘/비타D", type:"pill", icon:"💊"});
+        tasks.push({t:"21:00", l:"저녁", n: dinnerMeal, type: isFastStart ? "fast" : "meal", icon: isFastStart ? "🚫" : "🍚"});
+        tasks.push({t:"21:30", l:"약", n:"칼슘/마그네슘/비타D", type:"pill", icon:"💊"});
 
         let workoutText = "가벼운 산책";
         if (curD >= 4) {
@@ -264,5 +264,6 @@
 </script>
 </body>
 </html>
+
 
 
