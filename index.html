@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cloud Switch-On Dash</title>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=16313"></script><script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
         :root {
@@ -50,7 +50,38 @@
         .step-title { font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; }
         .step-title span { background: white; color: #333; font-size: 10px; padding: 1px 5px; border-radius: 3px; margin-right: 6px; }
         .step-desc { color: #CBD5E1; padding-left: 28px; line-height: 1.4; }
-        .save-btn { position: fixed; bottom: 20px; left: 15px; right: 15px; background: #333; color: white; padding: 18px; border-radius: 12px; text-align: center; font-weight: 700; border: none; z-index: 1000; }
+        .action-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 15px;
+            right: 15px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+        .action-btn {
+            border: none;
+            border-radius: 12px;
+            padding: 18px 12px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .save-btn {
+            flex: 1;
+            background: #333;
+            color: white;
+        }
+        .reset-btn {
+            width: 110px;
+            background: #FFFFFF;
+            color: #C62828;
+            border: 1px solid #FFCDD2;
+        }
+        .action-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -69,7 +100,10 @@
 
 <div class="day-grid" id="day-grid"></div>
 <div class="card" id="task-card"></div>
-<button class="save-btn" onclick="saveToCloud()">오늘의 성과 저장하기</button>
+<div class="action-bar">
+    <button id="reset-btn" class="action-btn reset-btn" onclick="resetAllData()">전체 초기화</button>
+    <button id="save-btn" class="action-btn save-btn" onclick="saveToCloud()">오늘의 성과 저장하기</button>
+</div>
 
 <script>
     const firebaseConfig = {
@@ -244,15 +278,59 @@
         document.getElementById('prog-bar').style.backgroundColor = `var(--w${curW})`;
     }
 
+    function setActionButtonsDisabled(disabled) {
+        document.getElementById('save-btn').disabled = disabled;
+        document.getElementById('reset-btn').disabled = disabled;
+    }
+
     function saveToCloud() {
         // 현재 화면의 체크박스 상태 수집
-        document.querySelectorAll('input[type="checkbox"]').forEach(c => { cloudData[c.id] = c.checked; });
-        
-        db.ref('tracker_data').set(cloudData).then(() => { 
-            alert('저장 완료!'); 
-            // ❗ 저장 후 초기화 없이 현재 상태만 다시 그려서 위치 유지
-            renderGrid(); 
+        document.querySelectorAll('input[type="checkbox"]').forEach(c => {
+            cloudData[c.id] = c.checked;
         });
+
+        setActionButtonsDisabled(true);
+
+        db.ref('tracker_data').set(cloudData)
+            .then(() => {
+                alert('저장 완료!');
+                renderGrid();
+            })
+            .catch((error) => {
+                console.error(error);
+                alert('저장에 실패했습니다. 인터넷 연결과 Firebase 규칙을 확인해 주세요.');
+            })
+            .finally(() => {
+                setActionButtonsDisabled(false);
+            });
+    }
+
+    function resetAllData() {
+        const ok = confirm(
+            '저장된 1일차부터 28일차까지의 모든 체크 기록을 삭제하고 처음 상태로 되돌리시겠습니까?
+
+삭제한 기록은 복구할 수 없습니다.'
+        );
+
+        if (!ok) return;
+
+        setActionButtonsDisabled(true);
+
+        db.ref('tracker_data').remove()
+            .then(() => {
+                cloudData = {};
+                curW = 1;
+                curD = 1;
+                setWeek(1);
+                alert('전체 기록을 초기화했습니다.');
+            })
+            .catch((error) => {
+                console.error(error);
+                alert('초기화에 실패했습니다. 인터넷 연결과 Firebase 규칙을 확인해 주세요.');
+            })
+            .finally(() => {
+                setActionButtonsDisabled(false);
+            });
     }
 
     function checkDayDone(day) {
@@ -264,6 +342,4 @@
 </script>
 </body>
 </html>
-
-
 
