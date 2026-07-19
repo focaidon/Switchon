@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cloud Switch-On Dash</title>
-    <script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=16758"></script><script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=17250"></script><script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <style>
@@ -192,9 +192,7 @@
                         console.error('Realtime Database 읽기 오류:', error);
                         weekTitle.innerText = '데이터 연결 실패';
                         alert(
-                            '데이터를 불러오지 못했습니다.
-
-' +
+                            '데이터를 불러오지 못했습니다.\n\n' +
                             'Firebase Realtime Database 규칙과 인터넷 연결을 확인해 주세요.'
                         );
                     }
@@ -207,9 +205,7 @@
                     weekTitle.innerText = '인증 실패';
 
                     alert(
-                        'Firebase 익명 인증에 실패했습니다.
-
-' +
+                        'Firebase 익명 인증에 실패했습니다.\n\n' +
                         'Firebase 콘솔에서 Authentication → 로그인 방법 → 익명을 사용 설정했는지 확인해 주세요.'
                     );
                 });
@@ -345,9 +341,8 @@
 
     function resetAllData() {
         const ok = confirm(
-            '저장된 1일차부터 28일차까지의 모든 체크 기록을 삭제하고 처음 상태로 되돌리시겠습니까?
-
-삭제한 기록은 복구할 수 없습니다.'
+            '저장된 1일차부터 28일차까지의 모든 체크 기록을 삭제하고 처음 상태로 되돌리시겠습니까?\n\n' +
+            '삭제한 기록은 복구할 수 없습니다.'
         );
 
         if (!ok) return;
