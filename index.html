@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cloud Switch-On Dash</title>
-    <script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=17250"></script><script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <title>Cloud Switch-On Dash</title><script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=7041"></script><script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <style>
@@ -83,6 +82,64 @@
             opacity: 0.55;
             cursor: not-allowed;
         }
+
+        /* 일정 시간 및 운동 선택 */
+        .task { cursor: default; gap: 0; }
+        .task input[type="checkbox"] { margin-right: 12px; cursor: pointer; }
+        .task .task-txt { cursor: pointer; min-width: 0; }
+        .time-tag {
+            background: none; border: 0; border-bottom: 1px dashed #B1BDC7;
+            border-radius: 0; color: #59677A; font: inherit; font-size: 11px;
+            width: 48px; min-width: 48px; padding: 8px 1px; margin-right: 4px;
+            text-align: left; cursor: pointer; font-variant-numeric: tabular-nums;
+        }
+        .time-tag:focus-visible, .workout-select:focus-visible { outline: 2px solid #3498DB; outline-offset: 3px; }
+        .workout-controls { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; flex-wrap: wrap; }
+        .workout-select { background: #F8FAFC; border: 1px solid #D7E2ED; border-radius: 8px;
+            color: #24344B; padding: 7px 3px; font-weight: 650; font-size: 12px; cursor: pointer;
+            max-width: 100%; min-width: 0; }
+        .workout-type { flex: 1 1 92px; }
+        .workout-part { flex: 0 0 73px; }
+        .workout-original { color: #64748B; font-size: 11px; margin-top: 5px; }
+        .edit-hint { color: #7B8794; font-size: 11px; margin-top: 13px; line-height: 1.5; }
+        .task-work .badge { margin-right: 6px; }
+        .wheel-modal[hidden] { display: none !important; }
+        .wheel-modal { position: fixed; inset: 0; z-index: 3000; background: rgba(15,23,42,.55);
+            display: flex; align-items: flex-end; justify-content: center; }
+        .wheel-sheet { background: white; width: 100%; max-width: 440px;
+            border-radius: 20px 20px 0 0; padding: 15px 18px max(20px,env(safe-area-inset-bottom));
+            box-shadow: 0 -8px 35px rgba(0,0,0,.14); }
+        .wheel-title { font-size: 16px; font-weight: 800; text-align: center; margin: 4px 0 14px; }
+        .wheel-wrap { display: flex; justify-content: center; align-items: center; gap: 10px; }
+        .wheel-pane { position: relative; width: min(38%, 125px); height: 220px; }
+        .wheel-pane::before { content: ''; position: absolute; pointer-events: none; z-index: 1;
+            left: 0; right: 0; top: 88px; height: 44px; background: #EFF6FF;
+            border-top: 1px solid #BFDBFE; border-bottom: 1px solid #BFDBFE; border-radius: 8px; }
+        .wheel-list { height: 220px; overflow-y: auto; overscroll-behavior: contain;
+            scroll-snap-type: y mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+            padding: 88px 0; }
+        .wheel-list::-webkit-scrollbar { display:none; }
+        .wheel-item { display: flex; justify-content: center; align-items: center;
+            height: 44px; width: 100%; padding: 0; border: 0; background: transparent;
+            color: #94A3B8; font: inherit; font-size: 17px; cursor: pointer;
+            scroll-snap-align: center; scroll-snap-stop: normal; position: relative; z-index: 2; }
+        .wheel-item.selected { color: #172554; font-size: 22px; font-weight: 800; }
+        .wheel-colon { font-weight: 800; font-size: 23px; }
+        .wheel-caption { font-size: 11px; color: #64748B; text-align: center; margin-top: 6px; }
+        .wheel-actions { display: flex; gap: 10px; margin-top: 17px; }
+        .wheel-actions button { border: 0; border-radius: 10px; padding: 13px 8px; font-size: 14px;
+            font-weight: 700; cursor: pointer; }
+        .wheel-cancel { flex: 1; background: #EEF2F7; color: #334155; }
+        .wheel-confirm { flex: 2; background: #1E293B; color: white; }
+        body.modal-open { overflow: hidden; }
+        @media (max-width: 360px) {
+            .card { padding: 12px; }
+            .task input[type="checkbox"] { margin-right: 8px; }
+            .time-tag { width: 44px; min-width: 44px; font-size: 10px; }
+            .badge { margin-right: 5px; padding: 3px 4px; }
+            .workout-controls { column-gap: 4px; }
+            .workout-select { font-size: 11px; }
+        }
     </style>
 </head>
 <body>
@@ -106,6 +163,28 @@
     <button id="save-btn" class="action-btn save-btn" onclick="saveToCloud()">오늘의 성과 저장하기</button>
 </div>
 
+
+<div id="time-modal" class="wheel-modal" role="dialog" aria-modal="true" aria-labelledby="wheel-title" hidden>
+    <div class="wheel-sheet">
+        <div class="wheel-title" id="wheel-title">시간 선택</div>
+        <div class="wheel-wrap">
+            <div class="wheel-pane">
+                <div class="wheel-list" id="hour-wheel" aria-label="시 선택"></div>
+                <div class="wheel-caption">시</div>
+            </div>
+            <span class="wheel-colon">:</span>
+            <div class="wheel-pane">
+                <div class="wheel-list" id="minute-wheel" aria-label="분 선택"></div>
+                <div class="wheel-caption">분</div>
+            </div>
+        </div>
+        <div class="wheel-actions">
+            <button type="button" class="wheel-cancel" onclick="closeTimePicker()">취소</button>
+            <button type="button" class="wheel-confirm" onclick="confirmTimePicker()">시간 적용</button>
+        </div>
+    </div>
+</div>
+
 <script>
     const firebaseConfig = {
         apiKey: "AIzaSyDtVClk4DN0GL8iTIIk6hJm4rxx0nWABvg",
@@ -126,190 +205,343 @@
     let cloudData = {};
     const info = ["", "1주: 몸의 스위치 켜기", "2주: 인슐린 저항성 개선", "3주: 체지방 감량 가속", "4주: 체지방 감량 가속"];
 
-    // --- 사파리 대응 강화 스와이프 로직 ---
-    let touchstartX = 0;
-    let touchstartY = 0;
-    let touchendX = 0;
-    let touchendY = 0;
+    // 원본의 체크박스 키를 유지하여 이미 저장한 기록과 호환됩니다.
+    // 새 옵션은 tracker_data/customizations 아래 별도로 저장됩니다.
+    const workoutTypes = { strength: '근력', mixed: '근력+유산소', cardio: '유산소' };
+    const bodyParts = ['가슴', '등', '어깨', '하체', '전신', '상체'];
+    let pendingChecks = {};     // 저장 버튼을 누르기 전의 체크 기록
+    let pendingOptions = {};    // 저장 버튼을 누르기 전의 시간/운동 설정
+    let currentTimeKey = null;
+    let currentTimeDay = null;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let gestureInControl = false;
 
-    function handleGesture() {
-        const threshold = 60; // 좌우 스와이프 민감도
-        const xDiff = touchendX - touchstartX;
-        const yDiff = touchendY - touchstartY;
+    const has = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+    const htmlEscape = value => String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[ch]));
 
-        // 수평 이동 거리가 수직 이동 거리보다 확실히 클 때만 작동 (세로 스크롤 방해 금지)
-        if (Math.abs(xDiff) > Math.abs(yDiff) && Math.abs(xDiff) > threshold) {
-            if (xDiff < 0) { // 왼쪽 스와이프 (Next)
-                if (curD < 28) {
-                    curD++;
-                    const targetWeek = Math.ceil(curD / 7);
-                    if (targetWeek !== curW) setWeek(targetWeek, false);
-                    else renderGrid();
-                }
-            } else { // 오른쪽 스와이프 (Prev)
-                if (curD > 1) {
-                    curD--;
-                    const targetWeek = Math.ceil(curD / 7);
-                    if (targetWeek !== curW) setWeek(targetWeek, false);
-                    else renderGrid();
-                }
-            }
+    function getOption(path) {
+        if (has(pendingOptions, path)) return pendingOptions[path];
+        let value = cloudData;
+        for (const part of path.split('/')) {
+            if (!value || typeof value !== 'object' || !has(value, part)) return undefined;
+            value = value[part];
         }
+        return value;
     }
 
-    document.addEventListener('touchstart', e => {
-        touchstartX = e.changedTouches[0].screenX;
-        touchstartY = e.changedTouches[0].screenY;
+    function getChecked(id) {
+        return has(pendingChecks, id) ? pendingChecks[id] : cloudData[id] === true;
+    }
+
+    function setOption(path, value) {
+        pendingOptions[path] = value;
+        refreshSaveButton();
+    }
+
+    function refreshSaveButton() {
+        const dirty = Object.keys(pendingChecks).length > 0 || Object.keys(pendingOptions).length > 0;
+        document.getElementById('save-btn').textContent = dirty ? '변경사항 저장하기' : '오늘의 성과 저장하기';
+    }
+
+    // 수평 스와이프로 날짜 변경. 시간 선택창/드롭다운을 조작할 때는 날짜를 바꾸지 않습니다.
+    document.addEventListener('touchstart', event => {
+        const t = event.changedTouches[0];
+        touchStartX = t.screenX;
+        touchStartY = t.screenY;
+        gestureInControl = Boolean(event.target.closest('button, select, input, .wheel-modal'));
     }, { passive: true });
 
-    document.addEventListener('touchend', e => {
-        touchendX = e.changedTouches[0].screenX;
-        touchendY = e.changedTouches[0].screenY;
-        handleGesture();
+    document.addEventListener('touchend', event => {
+        if (gestureInControl || currentTimeKey !== null) return;
+        const t = event.changedTouches[0];
+        const dx = t.screenX - touchStartX;
+        const dy = t.screenY - touchStartY;
+        if (Math.abs(dx) <= 60 || Math.abs(dx) <= Math.abs(dy)) return;
+        const nextDay = curD + (dx < 0 ? 1 : -1);
+        if (nextDay < 1 || nextDay > 28) return;
+        curD = nextDay;
+        const nextWeek = Math.ceil(curD / 7);
+        if (nextWeek !== curW) setWeek(nextWeek, false);
+        else renderGrid();
     }, { passive: true });
-    // ------------------------------------
 
     function init() {
-        const weekTitle = document.getElementById('week-title');
-        weekTitle.innerText = '인증 중...';
+        document.getElementById('week-title').innerText = '인증 중...';
+        initTimeWheels();
+        document.getElementById('time-modal').addEventListener('click', event => {
+            if (event.target.id === 'time-modal') closeTimePicker();
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && currentTimeKey !== null) closeTimePicker();
+        });
 
-        auth.onAuthStateChanged((user) => {
+        auth.onAuthStateChanged(user => {
+            const weekTitle = document.getElementById('week-title');
             if (user) {
                 weekTitle.innerText = '데이터 연결 중...';
-
-                db.ref('tracker_data').on(
-                    'value',
-                    (snapshot) => {
-                        cloudData = snapshot.val() || {};
-
-                        if (document.getElementById('day-grid').innerHTML === '') {
-                            setWeek(1);
-                        } else {
-                            renderGrid();
-                        }
-                    },
-                    (error) => {
-                        console.error('Realtime Database 읽기 오류:', error);
-                        weekTitle.innerText = '데이터 연결 실패';
-                        alert(
-                            '데이터를 불러오지 못했습니다.\n\n' +
-                            'Firebase Realtime Database 규칙과 인터넷 연결을 확인해 주세요.'
-                        );
-                    }
-                );
+                db.ref('tracker_data').on('value', snapshot => {
+                    cloudData = snapshot.val() || {};
+                    if (document.getElementById('day-grid').innerHTML === '') setWeek(1);
+                    else renderGrid();
+                }, error => {
+                    console.error('Realtime Database 읽기 오류:', error);
+                    weekTitle.innerText = '데이터 연결 실패';
+                    alert('데이터를 불러오지 못했습니다.\n\nFirebase Realtime Database 규칙과 인터넷 연결을 확인해 주세요.');
+                });
             } else {
                 weekTitle.innerText = '익명 로그인 중...';
-
-                auth.signInAnonymously().catch((error) => {
+                auth.signInAnonymously().catch(error => {
                     console.error('Firebase 익명 로그인 오류:', error);
                     weekTitle.innerText = '인증 실패';
-
-                    alert(
-                        'Firebase 익명 인증에 실패했습니다.\n\n' +
-                        'Firebase 콘솔에서 Authentication → 로그인 방법 → 익명을 사용 설정했는지 확인해 주세요.'
-                    );
+                    alert('Firebase 익명 인증에 실패했습니다.\n\nFirebase 콘솔에서 Authentication → 로그인 방법 → 익명을 사용 설정했는지 확인해 주세요.');
                 });
             }
         });
     }
 
-    function setWeek(w, resetDay = true) {
-        if (w < 1 || w > 4) return;
-        curW = w; 
-        if(resetDay) curD = (w-1)*7 + 1;
-        
-        document.querySelectorAll('.w-tab').forEach((t, i) => t.classList.toggle('active', i+1 === w));
-        document.getElementById('week-title').innerText = info[w];
-        document.getElementById('week-title').style.color = `var(--w${w})`;
+    function setWeek(week, resetDay = true) {
+        if (week < 1 || week > 4) return;
+        curW = week;
+        if (resetDay) curD = (week - 1) * 7 + 1;
+        document.querySelectorAll('.w-tab').forEach((el, i) => el.classList.toggle('active', i + 1 === week));
+        const title = document.getElementById('week-title');
+        title.innerText = info[week];
+        title.style.color = `var(--w${week})`;
         renderGrid();
     }
 
+    function makeTasks(day) {
+        const week = Math.ceil(day / 7);
+        const dayInWeek = (day - 1) % 7;
+        const isFastStart = (week === 2 && dayInWeek === 0) || (week >= 3 && (dayInWeek === 0 || dayInWeek === 4));
+        const isFastEnd = (week === 2 && dayInWeek === 1) || (week >= 3 && (dayInWeek === 1 || dayInWeek === 5));
+        const tasks = [];
+        tasks.push({key:'morning-pill', t:'09:30', l:'약', n:'유산균/코큐텐(공복)', type:'pill', icon:'💊'});
+        tasks.push({key:'breakfast', t:'10:00', l:'아침', n:isFastEnd ? '단식 중 (물 많이)' : '쉐이크', type:isFastEnd ? 'fast' : 'meal', icon:isFastEnd ? '🚫' : '🍚'});
+        tasks.push({key:'lunch', t:'13:00', l:'점심', n:isFastEnd ? '단식 중 (물 많이)' : (day <= 3 ? '쉐이크' : '현미밥 1/2공기 식사'), type:isFastEnd ? 'fast' : 'meal', icon:isFastEnd ? '🚫' : '🍚'});
+        if (day >= 4) tasks.push({key:'lunch-pill', t:'13:30', l:'약', n:'종합/오메가/비타C', type:'pill', icon:'💊'});
+        tasks.push({key:'snack', t:'17:00', l:'간식', n:isFastEnd ? '단식 중 (물 많이)' : '쉐이크', type:isFastEnd ? 'fast' : 'meal', icon:isFastEnd ? '🚫' : '🍚'});
+        const dinner = isFastStart ? '단식 시작 (물 많이)' : (day <= 7 ? '쉐이크' : (isFastEnd ? '단백질 식사 (단식 종료)' : '단백질 식사(밥X)'));
+        tasks.push({key:'dinner', t:'21:00', l:'저녁', n:dinner, type:isFastStart ? 'fast' : 'meal', icon:isFastStart ? '🚫' : '🍚'});
+        tasks.push({key:'night-pill', t:'21:30', l:'약', n:'칼슘/마그네슘/비타D', type:'pill', icon:'💊'});
+        let workout = '가벼운 산책';
+        if (day >= 4) {
+            const daysSinceStart = day - 4;
+            const hasStrength = daysSinceStart % 4 === 0;
+            const hasCardio = daysSinceStart % 2 === 0;
+            if (hasStrength && hasCardio) workout = '하체 근력 + 유산소';
+            else if (hasStrength) workout = '하체 근력운동만';
+            else if (hasCardio) workout = '유산소만';
+            else workout = '휴식일 (가벼운 산책)';
+        }
+        tasks.push({key:'exercise', t:'운동', l:'운동', n:workout, type:'work', icon:'🏃'});
+        return tasks;
+    }
+
+    function legacyId(day, task) {
+        return `d${day}-${task.l}-${task.n.replace(/[^a-zA-Z가-힣]/g,'')}`;
+    }
+
+    function checkDayDone(day) {
+        return makeTasks(day).every(task => getChecked(legacyId(day, task)));
+    }
+
     function renderGrid() {
-        const grid = document.getElementById('day-grid'); grid.innerHTML = '';
-        for (let i = (curW-1)*7 + 1; i <= curW*7; i++) {
+        const grid = document.getElementById('day-grid');
+        grid.innerHTML = '';
+        for (let day = (curW - 1) * 7 + 1; day <= curW * 7; day++) {
             const btn = document.createElement('div');
-            const isDone = checkDayDone(i);
-            btn.className = `d-btn ${i === curD ? 'active' : ''} ${isDone ? 'done' : ''}`;
-            btn.innerHTML = `<div style="font-size:10px; color:#888;">Day</div><div style="font-size:14px;">${i}</div><div class="dot"></div>`;
-            btn.onclick = () => { curD = i; renderGrid(); };
+            btn.className = `d-btn ${day === curD ? 'active' : ''} ${checkDayDone(day) ? 'done' : ''}`;
+            btn.innerHTML = `<div style="font-size:10px; color:#888;">Day</div><div style="font-size:14px;">${day}</div><div class="dot"></div>`;
+            btn.onclick = () => { curD = day; renderGrid(); };
             grid.appendChild(btn);
         }
         renderTasks();
     }
 
+    function defaultWorkoutChoice(day) {
+        if (day < 4) return {type: '', part: ''};
+        const daysSinceStart = day - 4;
+        if (daysSinceStart % 4 === 0) return {type: 'mixed', part: '하체'};
+        if (daysSinceStart % 2 === 0) return {type: 'cardio', part: ''};
+        return {type: '', part: ''};
+    }
+
+    function getWorkoutChoice(day) {
+        const base = `customizations/d${day}/workout`;
+        const defaults = defaultWorkoutChoice(day);
+        const storedType = getOption(`${base}/type`);
+        const type = has(workoutTypes, storedType) ? storedType : (storedType === '' ? '' : defaults.type);
+        const storedPart = getOption(`${base}/part`);
+        const part = bodyParts.includes(storedPart) ? storedPart : (defaults.part || '하체');
+        const customized = storedType !== undefined || storedPart !== undefined;
+        return {type, part, customized};
+    }
+
+    function renderWorkoutControls(task) {
+        const choice = getWorkoutChoice(curD);
+        const typeOptions = Object.entries(workoutTypes).map(([value, label]) =>
+            `<option value="${value}" ${choice.type === value ? 'selected' : ''}>${label}</option>`).join('');
+        const partOptions = bodyParts.map(part =>
+            `<option value="${part}" ${choice.part === part ? 'selected' : ''}>${part}</option>`).join('');
+        const defaultText = !choice.type ? `<option value="" selected disabled>${htmlEscape(task.n)}</option>` : '';
+        const showPart = choice.type === 'strength' || choice.type === 'mixed';
+        return `<div class="workout-controls">
+            <select class="workout-select workout-type" aria-label="운동 종류" onchange="changeWorkoutType(this.value)">
+                ${defaultText}${typeOptions}
+            </select>
+            ${showPart ? `<select class="workout-select workout-part" aria-label="근력 운동 부위" onchange="changeWorkoutPart(this.value)">${partOptions}</select>` : ''}
+        </div>`;
+    }
+
     function renderTasks() {
         const card = document.getElementById('task-card');
-        const phase = curD <= 3 ? "집중기" : (curD <= 14 ? "도입기" : "가속기");
-        const dayInWeek = (curD - 1) % 7;
-
-        let isFastStart = (curW === 2 && dayInWeek === 0) || (curW >= 3 && (dayInWeek === 0 || dayInWeek === 4));
-        let isFastEnd = (curW === 2 && dayInWeek === 1) || (curW >= 3 && (dayInWeek === 1 || dayInWeek === 5));
-
-        let tasks = [];
-        tasks.push({t:"09:30", l:"약", n:"유산균/코큐텐(공복)", type:"pill", icon:"💊"});
-        let morningMeal = isFastEnd ? "단식 중 (물 많이)" : "쉐이크";
-        tasks.push({t:"10:00", l:"아침", n: morningMeal, type: isFastEnd ? "fast" : "meal", icon: isFastEnd ? "🚫" : "🍚"});
-        let lunchMeal = isFastEnd ? "단식 중 (물 많이)" : (curD <= 3 ? "쉐이크" : "현미밥 1/2공기 식사");
-        tasks.push({t:"13:00", l:"점심", n: lunchMeal, type: isFastEnd ? "fast" : "meal", icon: isFastEnd ? "🚫" : "🍚"});
-        if(curD >= 4) tasks.push({t:"13:30", l:"약", n:"종합/오메가/비타C", type:"pill", icon:"💊"});
-        let snackMeal = isFastEnd ? "단식 중 (물 많이)" : "쉐이크";
-        tasks.push({t:"17:00", l:"간식", n: snackMeal, type: isFastEnd ? "fast" : "meal", icon: isFastEnd ? "🚫" : "🍚"});
-        let dinnerMeal = isFastStart ? "단식 시작 (물 많이)" : (curD <= 7 ? "쉐이크" : (isFastEnd ? "단백질 식사 (단식 종료)" : "단백질 식사(밥X)"));
-        tasks.push({t:"21:00", l:"저녁", n: dinnerMeal, type: isFastStart ? "fast" : "meal", icon: isFastStart ? "🚫" : "🍚"});
-        tasks.push({t:"21:30", l:"약", n:"칼슘/마그네슘/비타D", type:"pill", icon:"💊"});
-
-        let workoutText = "가벼운 산책";
-        if (curD >= 4) {
-            const daysSinceStart = curD - 4;
-            const hasStrength = daysSinceStart % 4 === 0;
-            const hasCardio = daysSinceStart % 2 === 0;
-            if (hasStrength && hasCardio) workoutText = "하체 근력 + 유산소";
-            else if (hasStrength) workoutText = "하체 근력운동만";
-            else if (hasCardio) workoutText = "유산소만";
-            else workoutText = "휴식일 (가벼운 산책)";
-        }
-        tasks.push({t:"운동", l:"운동", n: workoutText, type:"work", icon:"🏃"});
-
+        const phase = curD <= 3 ? '집중기' : (curD <= 14 ? '도입기' : '가속기');
+        const tasks = makeTasks(curD);
         let html = `<div class="card-title"><span style="font-weight:900;">Day ${curD} 루틴</span><span class="phase-label" style="background:var(--w${curW}); color:white;">${phase}</span></div>`;
-        
-        tasks.forEach(tk => {
-            const id = `d${curD}-${tk.l}-${tk.n.replace(/[^a-zA-Z가-힣]/g,'')}`;
-            const isChecked = cloudData[id] ? 'checked' : '';
-            html += `
-            <label class="task">
-                <span class="time-tag">${tk.t}</span>
-                <input type="checkbox" id="${id}" onchange="updateProg()" ${isChecked}>
-                <span class="badge badge-${tk.type}">${tk.icon} ${tk.l}</span>
-                <span class="task-txt">${tk.n}</span>
-            </label>`;
+
+        tasks.forEach(task => {
+            const id = legacyId(curD, task);
+            const checked = getChecked(id) ? 'checked' : '';
+            const customTime = getOption(`customizations/d${curD}/times/${task.key}`);
+            const displayTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(customTime || '') ? customTime : task.t;
+            html += `<div class="task ${task.key === 'exercise' ? 'task-work' : ''}">
+                <button type="button" class="time-tag" title="시간 변경" aria-label="${htmlEscape(task.l)} 시간 변경" onclick="openTimePicker('${task.key}')">${displayTime}</button>
+                <input type="checkbox" id="${id}" aria-label="${htmlEscape(task.l)} 완료" onchange="onCheckChanged(this)" ${checked}>
+                <span class="badge badge-${task.type}">${task.icon} ${task.l}</span>
+                ${task.key === 'exercise' ? renderWorkoutControls(task) : `<label for="${id}" class="task-txt">${htmlEscape(task.n)}</label>`}
+            </div>`;
         });
 
-        if (curD >= 4) {
-            const daysSinceStart = curD - 4;
-            const hasStrength = daysSinceStart % 4 === 0;
-            const hasCardio = daysSinceStart % 2 === 0;
-            let guideContent = '';
-            if (hasStrength && hasCardio) {
-                guideContent = `<div class="step-box"><div class="step-title"><span>1</span> 준비 운동</div><div class="step-desc">속도 4.0으로 5분간 천천히 걷기</div></div><div class="step-box"><div class="step-title"><span>2</span> 근력 운동</div><div class="step-desc">하체 머신(익스텐션/컬/레그프레스) 각 3세트</div></div><div class="step-box"><div class="step-title"><span>3</span> 유산소</div><div class="step-desc">속도 4 (3분) / 속도 7 (2분) 6세트 (30분)</div></div><div class="step-box"><div class="step-title"><span>4</span> 마무리</div><div class="step-desc">스트레칭으로 하체 근육 이완</div></div>`;
-            } else if (hasStrength) {
-                guideContent = `<div class="step-box"><div class="step-title"><span>1</span> 준비 운동</div><div class="step-desc">가벼운 관절 스트레칭 5분</div></div><div class="step-box"><div class="step-title"><span>2</span> 근력 운동</div><div class="step-desc">하체 머신(익스텐션/컬/레그프레스) 각 3세트</div></div><div class="step-box"><div class="step-title"><span>3</span> 마무리</div><div class="step-desc">스트레칭으로 하체 근육 이완 10분</div></div>`;
-            } else if (hasCardio) {
-                guideContent = `<div class="step-box"><div class="step-title"><span>1</span> 준비 운동</div><div class="step-desc">속도 4.0으로 5분간 천천히 걷기</div></div><div class="step-box"><div class="step-title"><span>2</span> 유산소</div><div class="step-desc">속도 4 (3분) / 속도 7 (2분) 6세트 (30분)</div></div><div class="step-box"><div class="step-title"><span>3</span> 마무리</div><div class="step-desc">가벼운 스트레칭 5분</div></div>`;
-            } else {
-                guideContent = `<div class="step-box"><div class="step-title"><span>🌿</span> 휴식일</div><div class="step-desc">30분 가벼운 산책으로 혈액순환 유지</div></div><div class="step-box"><div class="step-title"><span>💪</span> 회복에 집중</div><div class="step-desc">근육 회복을 위한 충분한 휴식</div></div>`;
-            }
-            html += `<div class="workout-guide"><div class="guide-header">🏆 실전 루틴 가이드</div><div class="guide-content">${guideContent}</div></div>`;
-        }
+        const guide = workoutGuide(curD);
+        if (guide) html += `<div class="workout-guide"><div class="guide-header">🏆 실전 루틴 가이드</div><div class="guide-content">${guide}</div></div>`;
+        html += `<div class="edit-hint">시간과 운동을 바꾼 뒤 하단의 저장 버튼을 누르면 다른 기기에서도 동일하게 표시됩니다.</div>`;
         card.innerHTML = html;
         updateProg();
+        refreshSaveButton();
+    }
+
+    function workoutGuide(day) {
+        const choice = getWorkoutChoice(day);
+        if (choice.customized && choice.type) {
+            const hasStrength = choice.type === 'strength' || choice.type === 'mixed';
+            const hasCardio = choice.type === 'cardio' || choice.type === 'mixed';
+            const step = (num, title, description) => `<div class="step-box"><div class="step-title"><span>${num}</span> ${title}</div><div class="step-desc">${description}</div></div>`;
+            let content = step(1, '준비 운동', '운동 전 가벼운 준비 운동 5분');
+            let num = 2;
+            if (hasStrength) content += step(num++, `${htmlEscape(choice.part)} 근력 운동`, '선택한 부위의 운동을 진행하세요.');
+            if (hasCardio) content += step(num++, '유산소', '속도 4 (3분) / 속도 7 (2분) 6세트 (30분)');
+            content += step(num, '마무리', '가벼운 스트레칭으로 마무리');
+            return content;
+        }
+        if (day < 4) return '';
+        // 기존 4일차 이후의 운동 가이드 내용을 그대로 유지합니다.
+        const daysSinceStart = day - 4;
+        const hasStrength = daysSinceStart % 4 === 0;
+        const hasCardio = daysSinceStart % 2 === 0;
+        if (hasStrength && hasCardio) {
+            return `<div class="step-box"><div class="step-title"><span>1</span> 준비 운동</div><div class="step-desc">속도 4.0으로 5분간 천천히 걷기</div></div><div class="step-box"><div class="step-title"><span>2</span> 근력 운동</div><div class="step-desc">하체 머신(익스텐션/컬/레그프레스) 각 3세트</div></div><div class="step-box"><div class="step-title"><span>3</span> 유산소</div><div class="step-desc">속도 4 (3분) / 속도 7 (2분) 6세트 (30분)</div></div><div class="step-box"><div class="step-title"><span>4</span> 마무리</div><div class="step-desc">스트레칭으로 하체 근육 이완</div></div>`;
+        } else if (hasStrength) {
+            return `<div class="step-box"><div class="step-title"><span>1</span> 준비 운동</div><div class="step-desc">가벼운 관절 스트레칭 5분</div></div><div class="step-box"><div class="step-title"><span>2</span> 근력 운동</div><div class="step-desc">하체 머신(익스텐션/컬/레그프레스) 각 3세트</div></div><div class="step-box"><div class="step-title"><span>3</span> 마무리</div><div class="step-desc">스트레칭으로 하체 근육 이완 10분</div></div>`;
+        } else if (hasCardio) {
+            return `<div class="step-box"><div class="step-title"><span>1</span> 준비 운동</div><div class="step-desc">속도 4.0으로 5분간 천천히 걷기</div></div><div class="step-box"><div class="step-title"><span>2</span> 유산소</div><div class="step-desc">속도 4 (3분) / 속도 7 (2분) 6세트 (30분)</div></div><div class="step-box"><div class="step-title"><span>3</span> 마무리</div><div class="step-desc">가벼운 스트레칭 5분</div></div>`;
+        }
+        return `<div class="step-box"><div class="step-title"><span>🌿</span> 휴식일</div><div class="step-desc">30분 가벼운 산책으로 혈액순환 유지</div></div><div class="step-box"><div class="step-title"><span>💪</span> 회복에 집중</div><div class="step-desc">근육 회복을 위한 충분한 휴식</div></div>`;
+    }
+
+    function changeWorkoutType(type) {
+        if (!has(workoutTypes, type)) return;
+        setOption(`customizations/d${curD}/workout/type`, type);
+        const currentPart = getOption(`customizations/d${curD}/workout/part`);
+        if ((type === 'strength' || type === 'mixed') && !bodyParts.includes(currentPart)) {
+            setOption(`customizations/d${curD}/workout/part`, getWorkoutChoice(curD).part);
+        }
+        renderTasks();
+    }
+
+    function changeWorkoutPart(part) {
+        if (!bodyParts.includes(part)) return;
+        setOption(`customizations/d${curD}/workout/part`, part);
+        renderTasks();
+    }
+
+    function onCheckChanged(input) {
+        pendingChecks[input.id] = input.checked;
+        updateProg();
+        document.querySelectorAll('.d-btn').forEach((btn, index) => {
+            btn.classList.toggle('done', checkDayDone((curW - 1) * 7 + index + 1));
+        });
+        refreshSaveButton();
     }
 
     function updateProg() {
-        const cbs = document.querySelectorAll('input[type="checkbox"]');
-        const checked = Array.from(cbs).filter(c => c.checked).length;
-        const per = Math.round((checked / cbs.length) * 100) || 0;
-        document.getElementById('prog-bar').style.width = per + '%';
-        document.getElementById('prog-bar').style.backgroundColor = `var(--w${curW})`;
+        const inputs = document.querySelectorAll('#task-card input[type="checkbox"]');
+        const checked = Array.from(inputs).filter(input => input.checked).length;
+        const per = Math.round((checked / inputs.length) * 100) || 0;
+        const bar = document.getElementById('prog-bar');
+        bar.style.width = per + '%';
+        bar.style.backgroundColor = `var(--w${curW})`;
+    }
+
+    // iOS/Android/PC에서 동일한 방식으로 작동하는 시·분 휠.
+    function initTimeWheels() {
+        for (const [id, max] of [['hour-wheel', 24], ['minute-wheel', 60]]) {
+            const wheel = document.getElementById(id);
+            wheel.innerHTML = Array.from({length: max}, (_, num) =>
+                `<button type="button" class="wheel-item" data-number="${num}" onclick="scrollWheelTo('${id}',${num})">${String(num).padStart(2, '0')}</button>`).join('');
+            wheel.addEventListener('scroll', () => updateWheelHighlight(wheel), {passive:true});
+        }
+    }
+
+    function scrollWheelTo(id, num) {
+        document.getElementById(id).scrollTo({top: num * 44, behavior: 'smooth'});
+    }
+
+    function getWheelNumber(id) {
+        const wheel = document.getElementById(id);
+        const max = id === 'hour-wheel' ? 23 : 59;
+        return Math.max(0, Math.min(max, Math.round(wheel.scrollTop / 44)));
+    }
+
+    function updateWheelHighlight(wheel) {
+        const chosen = getWheelNumber(wheel.id);
+        wheel.querySelectorAll('.wheel-item').forEach(item =>
+            item.classList.toggle('selected', Number(item.dataset.number) === chosen));
+    }
+
+    function openTimePicker(taskKey) {
+        const task = makeTasks(curD).find(item => item.key === taskKey);
+        if (!task) return;
+        currentTimeKey = taskKey;
+        currentTimeDay = curD;
+        const stored = getOption(`customizations/d${curD}/times/${taskKey}`);
+        const time = /^([01]\d|2[0-3]):[0-5]\d$/.test(stored || '') ? stored :
+            (/^([01]\d|2[0-3]):[0-5]\d$/.test(task.t) ? task.t : '18:00');
+        document.getElementById('wheel-title').textContent = `${task.l} 시간 선택`;
+        document.getElementById('time-modal').hidden = false;
+        document.body.classList.add('modal-open');
+        // 표시 직후 해당 값이 휠 중앙에 오도록 이동합니다.
+        document.getElementById('hour-wheel').scrollTop = Number(time.slice(0, 2)) * 44;
+        document.getElementById('minute-wheel').scrollTop = Number(time.slice(3, 5)) * 44;
+        updateWheelHighlight(document.getElementById('hour-wheel'));
+        updateWheelHighlight(document.getElementById('minute-wheel'));
+    }
+
+    function closeTimePicker() {
+        document.getElementById('time-modal').hidden = true;
+        document.body.classList.remove('modal-open');
+        currentTimeKey = null;
+        currentTimeDay = null;
+    }
+
+    function confirmTimePicker() {
+        if (currentTimeKey === null) return;
+        const hh = String(getWheelNumber('hour-wheel')).padStart(2, '0');
+        const mm = String(getWheelNumber('minute-wheel')).padStart(2, '0');
+        setOption(`customizations/d${currentTimeDay}/times/${currentTimeKey}`, `${hh}:${mm}`);
+        closeTimePicker();
+        renderTasks();
     }
 
     function setActionButtonsDisabled(disabled) {
@@ -318,61 +550,48 @@
     }
 
     function saveToCloud() {
-        // 현재 화면의 체크박스 상태 수집
-        document.querySelectorAll('input[type="checkbox"]').forEach(c => {
-            cloudData[c.id] = c.checked;
-        });
-
+        const checkPatch = {...pendingChecks};
+        const optionPatch = {...pendingOptions};
+        const patch = {...checkPatch, ...optionPatch};
+        if (Object.keys(patch).length === 0) {
+            alert('저장할 변경사항이 없습니다.');
+            return;
+        }
         setActionButtonsDisabled(true);
-
-        db.ref('tracker_data').set(cloudData)
-            .then(() => {
-                alert('저장 완료!');
-                renderGrid();
-            })
-            .catch((error) => {
-                console.error(error);
-                alert('저장에 실패했습니다. 인터넷 연결과 Firebase 규칙을 확인해 주세요.');
-            })
-            .finally(() => {
-                setActionButtonsDisabled(false);
-            });
+        // 여러 기기에서 사용해도 수정하지 않은 기존 기록을 덮어쓰지 않습니다.
+        db.ref('tracker_data').update(patch).then(() => {
+            for (const [key, value] of Object.entries(checkPatch)) {
+                if (pendingChecks[key] === value) delete pendingChecks[key];
+            }
+            for (const [key, value] of Object.entries(optionPatch)) {
+                if (pendingOptions[key] === value) delete pendingOptions[key];
+            }
+            alert('저장 완료!');
+            renderGrid();
+        }).catch(error => {
+            console.error(error);
+            alert('저장에 실패했습니다. 인터넷 연결과 Firebase 규칙을 확인해 주세요.');
+        }).finally(() => setActionButtonsDisabled(false));
     }
 
     function resetAllData() {
-        const ok = confirm(
-            '저장된 1일차부터 28일차까지의 모든 체크 기록을 삭제하고 처음 상태로 되돌리시겠습니까?\n\n' +
-            '삭제한 기록은 복구할 수 없습니다.'
-        );
-
+        const ok = confirm('1일차부터 28일차까지의 모든 체크 기록, 변경한 시간과 운동 설정을 삭제하고 초기화하시겠습니까?\n\n삭제한 기록은 복구할 수 없습니다.');
         if (!ok) return;
-
         setActionButtonsDisabled(true);
-
-        db.ref('tracker_data').remove()
-            .then(() => {
-                cloudData = {};
-                curW = 1;
-                curD = 1;
-                setWeek(1);
-                alert('전체 기록을 초기화했습니다.');
-            })
-            .catch((error) => {
-                console.error(error);
-                alert('초기화에 실패했습니다. 인터넷 연결과 Firebase 규칙을 확인해 주세요.');
-            })
-            .finally(() => {
-                setActionButtonsDisabled(false);
-            });
-    }
-
-    function checkDayDone(day) {
-        const prefix = `d${day}-`;
-        const dayTasks = Object.keys(cloudData).filter(k => k.startsWith(prefix));
-        return dayTasks.length > 0 && dayTasks.every(k => cloudData[k] === true);
+        db.ref('tracker_data').remove().then(() => {
+            pendingChecks = {};
+            pendingOptions = {};
+            cloudData = {};
+            curW = 1;
+            curD = 1;
+            setWeek(1);
+            alert('전체 기록을 초기화했습니다.');
+        }).catch(error => {
+            console.error(error);
+            alert('초기화에 실패했습니다. 인터넷 연결과 Firebase 규칙을 확인해 주세요.');
+        }).finally(() => setActionButtonsDisabled(false));
     }
     window.onload = init;
 </script>
 </body>
 </html>
-
