@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cloud Switch-On Dash</title><script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=7041"></script><script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <title>Cloud Switch-On Dash</title><script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=7438"></script><script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <style>
@@ -43,13 +43,6 @@
         .badge-work { background: var(--work-bg); color: var(--work-txt); }
         .badge-fast { background: var(--fast-bg); color: var(--fast-txt); }
         .task-txt { font-size: 14px; font-weight: 600; color: #334155; }
-        .workout-guide { margin-top: 15px; background: #334155; border-radius: 12px; overflow: hidden; color: white; }
-        .guide-header { padding: 12px; font-size: 13px; font-weight: 800; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .guide-content { padding: 15px; font-size: 12px; }
-        .step-box { margin-bottom: 12px; }
-        .step-title { font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; }
-        .step-title span { background: white; color: #333; font-size: 10px; padding: 1px 5px; border-radius: 3px; margin-right: 6px; }
-        .step-desc { color: #CBD5E1; padding-left: 28px; line-height: 1.4; }
         .action-bar {
             position: fixed;
             bottom: 20px;
@@ -94,14 +87,13 @@
             text-align: left; cursor: pointer; font-variant-numeric: tabular-nums;
         }
         .time-tag:focus-visible, .workout-select:focus-visible { outline: 2px solid #3498DB; outline-offset: 3px; }
-        .workout-controls { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; flex-wrap: wrap; }
+        .workout-controls { display: flex; align-items: center; gap: 6px; flex: 0 1 auto; min-width: 0; flex-wrap: wrap; }
         .workout-select { background: #F8FAFC; border: 1px solid #D7E2ED; border-radius: 8px;
             color: #24344B; padding: 7px 3px; font-weight: 650; font-size: 12px; cursor: pointer;
             max-width: 100%; min-width: 0; }
-        .workout-type { flex: 1 1 92px; }
-        .workout-part { flex: 0 0 73px; }
+        .workout-type { flex: 0 0 134px; width: 134px; }
+        .workout-part { flex: 0 0 80px; width: 80px; }
         .workout-original { color: #64748B; font-size: 11px; margin-top: 5px; }
-        .edit-hint { color: #7B8794; font-size: 11px; margin-top: 13px; line-height: 1.5; }
         .task-work .badge { margin-right: 6px; }
         .wheel-modal[hidden] { display: none !important; }
         .wheel-modal { position: fixed; inset: 0; z-index: 3000; background: rgba(15,23,42,.55);
@@ -132,6 +124,11 @@
         .wheel-cancel { flex: 1; background: #EEF2F7; color: #334155; }
         .wheel-confirm { flex: 2; background: #1E293B; color: white; }
         body.modal-open { overflow: hidden; }
+        @media (max-width: 600px) {
+            .task-work { flex-wrap: wrap; }
+            .task-work .workout-controls { flex: 0 0 100%; margin-top: 8px; padding-left: 0; }
+            .workout-type { flex-basis: 134px; }
+        }
         @media (max-width: 360px) {
             .card { padding: 12px; }
             .task input[type="checkbox"] { margin-right: 8px; }
@@ -375,8 +372,7 @@
         const type = has(workoutTypes, storedType) ? storedType : (storedType === '' ? '' : defaults.type);
         const storedPart = getOption(`${base}/part`);
         const part = bodyParts.includes(storedPart) ? storedPart : (defaults.part || '하체');
-        const customized = storedType !== undefined || storedPart !== undefined;
-        return {type, part, customized};
+        return {type, part};
     }
 
     function renderWorkoutControls(task) {
@@ -414,40 +410,9 @@
             </div>`;
         });
 
-        const guide = workoutGuide(curD);
-        if (guide) html += `<div class="workout-guide"><div class="guide-header">🏆 실전 루틴 가이드</div><div class="guide-content">${guide}</div></div>`;
-        html += `<div class="edit-hint">시간과 운동을 바꾼 뒤 하단의 저장 버튼을 누르면 다른 기기에서도 동일하게 표시됩니다.</div>`;
         card.innerHTML = html;
         updateProg();
         refreshSaveButton();
-    }
-
-    function workoutGuide(day) {
-        const choice = getWorkoutChoice(day);
-        if (choice.customized && choice.type) {
-            const hasStrength = choice.type === 'strength' || choice.type === 'mixed';
-            const hasCardio = choice.type === 'cardio' || choice.type === 'mixed';
-            const step = (num, title, description) => `<div class="step-box"><div class="step-title"><span>${num}</span> ${title}</div><div class="step-desc">${description}</div></div>`;
-            let content = step(1, '준비 운동', '운동 전 가벼운 준비 운동 5분');
-            let num = 2;
-            if (hasStrength) content += step(num++, `${htmlEscape(choice.part)} 근력 운동`, '선택한 부위의 운동을 진행하세요.');
-            if (hasCardio) content += step(num++, '유산소', '속도 4 (3분) / 속도 7 (2분) 6세트 (30분)');
-            content += step(num, '마무리', '가벼운 스트레칭으로 마무리');
-            return content;
-        }
-        if (day < 4) return '';
-        // 기존 4일차 이후의 운동 가이드 내용을 그대로 유지합니다.
-        const daysSinceStart = day - 4;
-        const hasStrength = daysSinceStart % 4 === 0;
-        const hasCardio = daysSinceStart % 2 === 0;
-        if (hasStrength && hasCardio) {
-            return `<div class="step-box"><div class="step-title"><span>1</span> 준비 운동</div><div class="step-desc">속도 4.0으로 5분간 천천히 걷기</div></div><div class="step-box"><div class="step-title"><span>2</span> 근력 운동</div><div class="step-desc">하체 머신(익스텐션/컬/레그프레스) 각 3세트</div></div><div class="step-box"><div class="step-title"><span>3</span> 유산소</div><div class="step-desc">속도 4 (3분) / 속도 7 (2분) 6세트 (30분)</div></div><div class="step-box"><div class="step-title"><span>4</span> 마무리</div><div class="step-desc">스트레칭으로 하체 근육 이완</div></div>`;
-        } else if (hasStrength) {
-            return `<div class="step-box"><div class="step-title"><span>1</span> 준비 운동</div><div class="step-desc">가벼운 관절 스트레칭 5분</div></div><div class="step-box"><div class="step-title"><span>2</span> 근력 운동</div><div class="step-desc">하체 머신(익스텐션/컬/레그프레스) 각 3세트</div></div><div class="step-box"><div class="step-title"><span>3</span> 마무리</div><div class="step-desc">스트레칭으로 하체 근육 이완 10분</div></div>`;
-        } else if (hasCardio) {
-            return `<div class="step-box"><div class="step-title"><span>1</span> 준비 운동</div><div class="step-desc">속도 4.0으로 5분간 천천히 걷기</div></div><div class="step-box"><div class="step-title"><span>2</span> 유산소</div><div class="step-desc">속도 4 (3분) / 속도 7 (2분) 6세트 (30분)</div></div><div class="step-box"><div class="step-title"><span>3</span> 마무리</div><div class="step-desc">가벼운 스트레칭 5분</div></div>`;
-        }
-        return `<div class="step-box"><div class="step-title"><span>🌿</span> 휴식일</div><div class="step-desc">30분 가벼운 산책으로 혈액순환 유지</div></div><div class="step-box"><div class="step-title"><span>💪</span> 회복에 집중</div><div class="step-desc">근육 회복을 위한 충분한 휴식</div></div>`;
     }
 
     function changeWorkoutType(type) {
