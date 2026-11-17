@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cloud Switch-On Dash</title><script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=7438"></script><script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <title>Cloud Switch-On Dash</title><script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=12502"></script><script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <style>
@@ -114,7 +114,7 @@
         .wheel-item { display: flex; justify-content: center; align-items: center;
             height: 44px; width: 100%; padding: 0; border: 0; background: transparent;
             color: #94A3B8; font: inherit; font-size: 17px; cursor: pointer;
-            scroll-snap-align: center; scroll-snap-stop: normal; position: relative; z-index: 2; }
+            scroll-snap-align: center; scroll-snap-stop: always; position: relative; z-index: 2; }
         .wheel-item.selected { color: #172554; font-size: 22px; font-weight: 800; }
         .wheel-colon { font-weight: 800; font-size: 23px; }
         .wheel-caption { font-size: 11px; color: #64748B; text-align: center; margin-top: 6px; }
@@ -391,6 +391,14 @@
         </div>`;
     }
 
+    // 직접 설정한 시간이 있으면 우선 적용합니다. 미설정·미완료 항목은 00:00으로 표시합니다.
+    function getDisplayTime(day, task) {
+        const customTime = getOption(`customizations/d${day}/times/${task.key}`);
+        if (/^([01]\d|2[0-3]):[0-5]\d$/.test(customTime || '')) return customTime;
+        if (getChecked(legacyId(day, task)) && /^([01]\d|2[0-3]):[0-5]\d$/.test(task.t)) return task.t;
+        return '00:00';
+    }
+
     function renderTasks() {
         const card = document.getElementById('task-card');
         const phase = curD <= 3 ? '집중기' : (curD <= 14 ? '도입기' : '가속기');
@@ -400,8 +408,7 @@
         tasks.forEach(task => {
             const id = legacyId(curD, task);
             const checked = getChecked(id) ? 'checked' : '';
-            const customTime = getOption(`customizations/d${curD}/times/${task.key}`);
-            const displayTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(customTime || '') ? customTime : task.t;
+            const displayTime = getDisplayTime(curD, task);
             html += `<div class="task ${task.key === 'exercise' ? 'task-work' : ''}">
                 <button type="button" class="time-tag" title="시간 변경" aria-label="${htmlEscape(task.l)} 시간 변경" onclick="openTimePicker('${task.key}')">${displayTime}</button>
                 <input type="checkbox" id="${id}" aria-label="${htmlEscape(task.l)} 완료" onchange="onCheckChanged(this)" ${checked}>
@@ -433,6 +440,8 @@
 
     function onCheckChanged(input) {
         pendingChecks[input.id] = input.checked;
+        const task = makeTasks(curD).find(item => legacyId(curD, item) === input.id);
+        if (task) input.closest('.task').querySelector('.time-tag').textContent = getDisplayTime(curD, task);
         updateProg();
         document.querySelectorAll('.d-btn').forEach((btn, index) => {
             btn.classList.toggle('done', checkDayDone((curW - 1) * 7 + index + 1));
@@ -449,24 +458,46 @@
         bar.style.backgroundColor = `var(--w${curW})`;
     }
 
-    // iOS/Android/PC에서 동일한 방식으로 작동하는 시·분 휠.
+    // 시 휠은 1시간 단위, 분 휠은 10분 단위로 선택합니다.
+    const wheelItemHeight = 44;
     function initTimeWheels() {
-        for (const [id, max] of [['hour-wheel', 24], ['minute-wheel', 60]]) {
+        for (const [id, values] of [
+            ['hour-wheel', Array.from({length: 24}, (_, num) => num)],
+            ['minute-wheel', [0, 10, 20, 30, 40, 50]]
+        ]) {
             const wheel = document.getElementById(id);
-            wheel.innerHTML = Array.from({length: max}, (_, num) =>
+            wheel.innerHTML = values.map(num =>
                 `<button type="button" class="wheel-item" data-number="${num}" onclick="scrollWheelTo('${id}',${num})">${String(num).padStart(2, '0')}</button>`).join('');
-            wheel.addEventListener('scroll', () => updateWheelHighlight(wheel), {passive:true});
+            wheel.addEventListener('scroll', () => updateWheelHighlight(wheel), {passive: true});
+
+            // 기본 브라우저 휠 스크롤(한 번에 약 100px)은 2칸 이상 이동할 수 있어 차단합니다.
+            // 마우스 휠을 돌릴 때는 한 번에 정확히 한 칸(44px)만 이동합니다.
+            let lastWheelAt = -Infinity;
+            wheel.addEventListener('wheel', event => {
+                event.preventDefault();
+                if (!event.deltaY) return;
+                const now = performance.now();
+                if (now - lastWheelAt < 85) return;
+                lastWheelAt = now;
+                const current = Math.round(wheel.scrollTop / wheelItemHeight);
+                const next = Math.max(0, Math.min(values.length - 1, current + Math.sign(event.deltaY)));
+                wheel.scrollTop = next * wheelItemHeight;
+                updateWheelHighlight(wheel);
+            }, {passive: false});
         }
     }
 
     function scrollWheelTo(id, num) {
-        document.getElementById(id).scrollTo({top: num * 44, behavior: 'smooth'});
+        const index = id === 'minute-wheel' ? num / 10 : num;
+        document.getElementById(id).scrollTo({top: index * wheelItemHeight, behavior: 'smooth'});
     }
 
     function getWheelNumber(id) {
         const wheel = document.getElementById(id);
-        const max = id === 'hour-wheel' ? 23 : 59;
-        return Math.max(0, Math.min(max, Math.round(wheel.scrollTop / 44)));
+        const isMinute = id === 'minute-wheel';
+        const maxIndex = isMinute ? 5 : 23;
+        const index = Math.max(0, Math.min(maxIndex, Math.round(wheel.scrollTop / wheelItemHeight)));
+        return isMinute ? index * 10 : index;
     }
 
     function updateWheelHighlight(wheel) {
@@ -480,15 +511,14 @@
         if (!task) return;
         currentTimeKey = taskKey;
         currentTimeDay = curD;
-        const stored = getOption(`customizations/d${curD}/times/${taskKey}`);
-        const time = /^([01]\d|2[0-3]):[0-5]\d$/.test(stored || '') ? stored :
-            (/^([01]\d|2[0-3]):[0-5]\d$/.test(task.t) ? task.t : '18:00');
+        const time = getDisplayTime(curD, task);
         document.getElementById('wheel-title').textContent = `${task.l} 시간 선택`;
         document.getElementById('time-modal').hidden = false;
         document.body.classList.add('modal-open');
         // 표시 직후 해당 값이 휠 중앙에 오도록 이동합니다.
-        document.getElementById('hour-wheel').scrollTop = Number(time.slice(0, 2)) * 44;
-        document.getElementById('minute-wheel').scrollTop = Number(time.slice(3, 5)) * 44;
+        document.getElementById('hour-wheel').scrollTop = Number(time.slice(0, 2)) * wheelItemHeight;
+        const minuteIndex = Math.max(0, Math.min(5, Math.round(Number(time.slice(3, 5)) / 10)));
+        document.getElementById('minute-wheel').scrollTop = minuteIndex * wheelItemHeight;
         updateWheelHighlight(document.getElementById('hour-wheel'));
         updateWheelHighlight(document.getElementById('minute-wheel'));
     }
