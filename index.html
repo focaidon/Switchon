@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cloud Switch-On Dash</title><script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=100670"></script><script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <title>Cloud Switch-On Dash</title><script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=171306"></script><script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <style>
@@ -393,7 +393,9 @@
 
     // 시간 자동 설정 대상: 운동을 제외한 모든 항목(약, 식사, 간식 등)
     // 사용자가 시간을 휠로 고르면 그 시간은 언제나 우선합니다.
-    const autoTimeStepHours = 4;
+    // 다음 항목의 종류에 따라 간격을 다르게 적용합니다.
+    // 식사·간식·단식 항목: 앞 시간 +4시간, 약: 앞 시간 +30분.
+    const autoTimeStepMinutes = { general: 240, pill: 30 };
     const timePath = (day, key) => `customizations/d${day}/times/${key}`;
     const timeModePath = (day, key) => `customizations/d${day}/time_modes/${key}`;
     const checkOrderPath = (day, key) => `customizations/d${day}/check_order/${key}`;
@@ -410,13 +412,18 @@
         return `${hh}:${mm}`;
     }
 
-    // 24시를 넘으면 다음 날 시간으로 이어집니다. 예: 22:10 → 02:10
-    function addHours(time, hours) {
+    // 24시를 넘으면 00시부터 다시 표시합니다. 예: 23:30 +30분 → 00:00.
+    function addMinutes(time, minutes) {
         const [hour, minute] = time.split(':').map(Number);
-        return `${String((hour + hours) % 24).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+        const total = (hour * 60 + minute + minutes) % (24 * 60);
+        return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
     }
 
-    // 체크 시각의 순서를 날짜별로 기록합니다. 실제 누른 순서에 따라 4시간을 더합니다.
+    function automaticIntervalMinutes(task) {
+        return task.type === 'pill' ? autoTimeStepMinutes.pill : autoTimeStepMinutes.general;
+    }
+
+    // 체크 시각의 순서를 날짜별로 기록합니다.
     function nextCheckOrder(day) {
         const orders = makeTasks(day).map(task => Number(getOption(checkOrderPath(day, task.key))) || 0);
         return Math.max(Date.now(), ...orders.map(n => n + 1));
@@ -434,8 +441,9 @@
         return typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
     }
 
-    // 저장된 체크 기록과 수동 시간을 기준으로, 아직 체크하지 않은 다음 항목의
-    // 시간을 4시간씩 미리 표시합니다. 이 미리보기 값은 체크할 때만 저장합니다.
+    // 저장된 체크 기록과 수동 시간을 기준으로, 미체크 항목의 시간을 미리 표시합니다.
+    // 다음 항목이 약이면 30분 뒤, 그 외 식사·간식이면 4시간 뒤입니다.
+    // 이 미리보기 값은 체크할 때만 저장합니다.
     // 복원된 구버전 데이터에 체크 순서(check_order)가 없어도 정상 계산됩니다.
     function getDayTimeSchedule(day) {
         const schedule = {};
@@ -446,7 +454,7 @@
             const mode = getOption(timeModePath(day, task.key));
             const checked = getChecked(legacyId(day, task));
 
-            // 운동은 4시간 자동 계산에서 완전히 제외합니다.
+            // 운동은 자동 시간 계산에서 완전히 제외합니다.
             if (!isAutoTimeTarget(task)) {
                 schedule[task.key] = {time: isValidTime(stored) ? stored : '00:00', kind: 'excluded'};
                 continue;
@@ -463,8 +471,8 @@
                 time = task.t;
                 kind = 'legacy';
             } else if (previousTime !== null) {
-                // 앞 항목을 체크하거나 시간을 직접 지정했다면 다음 시간을 미리 계산합니다.
-                time = addHours(previousTime, autoTimeStepHours);
+                // 앞 항목의 시간을 기준으로, 현재 항목의 종류에 맞는 간격을 적용합니다.
+                time = addMinutes(previousTime, automaticIntervalMinutes(task));
                 kind = 'preview';
             } else {
                 time = '00:00';
@@ -473,7 +481,7 @@
 
             schedule[task.key] = {time, kind};
             // 처음부터 미체크·미설정인 구간은 00:00을 유지합니다.
-            // 한 번 기준 시간이 정해지면 뒤 항목까지 4시간 간격으로 이어집니다.
+            // 한 번 기준 시간이 정해지면 뒤 항목까지 종류별 간격으로 이어집니다.
             if (kind !== 'empty') previousTime = time;
         }
         return schedule;
