@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cloud Switch-On Dash</title><script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=95386"></script><script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <title>Cloud Switch-On Dash</title><script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=100670"></script><script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <style>
@@ -422,27 +422,65 @@
         return Math.max(Date.now(), ...orders.map(n => n + 1));
     }
 
-    function previousCheckedTask(day, currentOrder, currentKey) {
-        return makeTasks(day)
-            .filter(task => isAutoTimeTarget(task) && task.key !== currentKey && getChecked(legacyId(day, task)))
-            .map(task => ({task, order: Number(getOption(checkOrderPath(day, task.key))) || 0}))
-            .filter(entry => entry.order > 0 && entry.order < currentOrder)
-            .sort((a, b) => b.order - a.order)[0]?.task || null;
-    }
-
-    // 예전부터 선택해 둔 시간은 수동 설정으로 취급하여 덮어쓰지 않습니다.
+    // 수동으로 지정한 시간은 자동 계산으로 덮어쓰지 않습니다.
+    // 구버전에서 입력한 시간에는 time_modes가 없으므로 수동 설정으로 취급합니다.
     function hasManualTime(day, task) {
         const mode = getOption(timeModePath(day, task.key));
         const time = getOption(timePath(day, task.key));
-        return mode !== 'auto' && /^([01]\d|2[0-3]):[0-5]\d$/.test(time || '');
+        return mode !== 'auto' && isValidTime(time);
     }
 
-    // 직접 설정한 시간이 있으면 우선 적용합니다. 미설정·미완료 항목은 00:00으로 표시합니다.
+    function isValidTime(value) {
+        return typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+    }
+
+    // 저장된 체크 기록과 수동 시간을 기준으로, 아직 체크하지 않은 다음 항목의
+    // 시간을 4시간씩 미리 표시합니다. 이 미리보기 값은 체크할 때만 저장합니다.
+    // 복원된 구버전 데이터에 체크 순서(check_order)가 없어도 정상 계산됩니다.
+    function getDayTimeSchedule(day) {
+        const schedule = {};
+        let previousTime = null;
+
+        for (const task of makeTasks(day)) {
+            const stored = getOption(timePath(day, task.key));
+            const mode = getOption(timeModePath(day, task.key));
+            const checked = getChecked(legacyId(day, task));
+
+            // 운동은 4시간 자동 계산에서 완전히 제외합니다.
+            if (!isAutoTimeTarget(task)) {
+                schedule[task.key] = {time: isValidTime(stored) ? stored : '00:00', kind: 'excluded'};
+                continue;
+            }
+
+            let time;
+            let kind;
+            if (isValidTime(stored) && (mode !== 'auto' || checked)) {
+                // 수동 설정 또는 이미 체크하고 저장해 둔 자동 시간입니다.
+                time = stored;
+                kind = mode === 'auto' ? 'checked-auto' : 'manual';
+            } else if (checked && isValidTime(task.t)) {
+                // 과거 버전에서 기록만 있고 시간 정보가 없는 경우도 처리합니다.
+                time = task.t;
+                kind = 'legacy';
+            } else if (previousTime !== null) {
+                // 앞 항목을 체크하거나 시간을 직접 지정했다면 다음 시간을 미리 계산합니다.
+                time = addHours(previousTime, autoTimeStepHours);
+                kind = 'preview';
+            } else {
+                time = '00:00';
+                kind = 'empty';
+            }
+
+            schedule[task.key] = {time, kind};
+            // 처음부터 미체크·미설정인 구간은 00:00을 유지합니다.
+            // 한 번 기준 시간이 정해지면 뒤 항목까지 4시간 간격으로 이어집니다.
+            if (kind !== 'empty') previousTime = time;
+        }
+        return schedule;
+    }
+
     function getDisplayTime(day, task) {
-        const customTime = getOption(`customizations/d${day}/times/${task.key}`);
-        if (/^([01]\d|2[0-3]):[0-5]\d$/.test(customTime || '')) return customTime;
-        if (getChecked(legacyId(day, task)) && /^([01]\d|2[0-3]):[0-5]\d$/.test(task.t)) return task.t;
-        return '00:00';
+        return getDayTimeSchedule(day)[task.key]?.time || '00:00';
     }
 
     function renderTasks() {
@@ -487,21 +525,22 @@
     function onCheckChanged(input) {
         const day = curD;
         const task = makeTasks(day).find(item => legacyId(day, item) === input.id);
+        // 현재 화면에 미리 표시된 값을 체크하는 순간의 예약 시간으로 확정합니다.
+        // 복원된 구버전의 시간도 이전 체크 항목으로 사용합니다.
+        const suggested = task ? getDayTimeSchedule(day)[task.key] : null;
         pendingChecks[input.id] = input.checked;
 
         if (task && isAutoTimeTarget(task)) {
             if (input.checked) {
-                const order = nextCheckOrder(day);
-                const previous = previousCheckedTask(day, order, task.key);
-                // 기존 수동 시간은 그대로 둡니다. 미설정 항목만 자동 기록합니다.
                 if (!hasManualTime(day, task)) {
-                    const previousTime = previous ? getDisplayTime(day, previous) : currentTimeInTenMinutes();
-                    setOption(timePath(day, task.key), previous ? addHours(previousTime, autoTimeStepHours) : previousTime);
+                    const chosenTime = suggested && suggested.kind !== 'empty'
+                        ? suggested.time : currentTimeInTenMinutes();
+                    setOption(timePath(day, task.key), chosenTime);
                     setOption(timeModePath(day, task.key), 'auto');
                 }
-                setOption(checkOrderPath(day, task.key), order);
+                setOption(checkOrderPath(day, task.key), nextCheckOrder(day));
             } else {
-                // 자동으로 들어간 시간은 체크 해제 시 지웁니다. 수동 시간은 유지합니다.
+                // 수동 입력은 보존하고 자동으로 확정한 값만 해제합니다.
                 if (getOption(timeModePath(day, task.key)) === 'auto') {
                     setOption(timePath(day, task.key), null);
                     setOption(timeModePath(day, task.key), null);
@@ -510,12 +549,11 @@
             }
         }
 
-        if (task) input.closest('.task').querySelector('.time-tag').textContent = getDisplayTime(day, task);
-        updateProg();
+        // 다음 미체크 항목의 자동 미리보기도 즉시 갱신합니다.
+        renderTasks();
         document.querySelectorAll('.d-btn').forEach((btn, index) => {
             btn.classList.toggle('done', checkDayDone((curW - 1) * 7 + index + 1));
         });
-        refreshSaveButton();
     }
 
     function updateProg() {
