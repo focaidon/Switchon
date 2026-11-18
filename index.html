@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cloud Switch-On Dash</title><script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=171306"></script><script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <title>Cloud Switch-On Dash</title><script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=177027"></script><script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <style>
@@ -391,11 +391,10 @@
         </div>`;
     }
 
-    // 시간 자동 설정 대상: 운동을 제외한 모든 항목(약, 식사, 간식 등)
-    // 사용자가 시간을 휠로 고르면 그 시간은 언제나 우선합니다.
-    // 다음 항목의 종류에 따라 간격을 다르게 적용합니다.
-    // 식사·간식·단식 항목: 앞 시간 +4시간, 약: 앞 시간 +30분.
-    const autoTimeStepMinutes = { general: 240, pill: 30 };
+    // 자동 시간 계산: 날짜별로 약 00:00에서 시작하며, 기본 미리보기는 DB에 저장하지 않습니다.
+    // 첫 약 -> 아침: +30분, 식사/간식 -> 약: +30분,
+    // 나머지 식사/간식 간격: +4시간(점심 약 -> 간식 포함).
+    // 운동은 시간 자동 계산에서 제외합니다.
     const timePath = (day, key) => `customizations/d${day}/times/${key}`;
     const timeModePath = (day, key) => `customizations/d${day}/time_modes/${key}`;
     const checkOrderPath = (day, key) => `customizations/d${day}/check_order/${key}`;
@@ -404,33 +403,36 @@
         return task.key !== 'exercise';
     }
 
-    // 분 선택 휠과 맞추어 현재 시간을 10분 단위로 내림합니다.
+    // 실제 체크 시각에서 가장 가까운 10분으로 반올림합니다.
+    // 예: 09:24 -> 09:20, 09:26 -> 09:30, 23:56 -> 00:00.
     function currentTimeInTenMinutes() {
         const now = new Date();
-        const hh = String(now.getHours()).padStart(2, '0');
-        const mm = String(Math.floor(now.getMinutes() / 10) * 10).padStart(2, '0');
-        return `${hh}:${mm}`;
+        const minutes = Math.round((now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60) / 10) * 10;
+        const normalized = minutes % (24 * 60);
+        return `${String(Math.floor(normalized / 60)).padStart(2, '0')}:${String(normalized % 60).padStart(2, '0')}`;
     }
 
-    // 24시를 넘으면 00시부터 다시 표시합니다. 예: 23:30 +30분 → 00:00.
+    // 24시를 넘으면 00시부터 다시 표시합니다.
     function addMinutes(time, minutes) {
         const [hour, minute] = time.split(':').map(Number);
         const total = (hour * 60 + minute + minutes) % (24 * 60);
         return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
     }
 
-    function automaticIntervalMinutes(task) {
-        return task.type === 'pill' ? autoTimeStepMinutes.pill : autoTimeStepMinutes.general;
+    function automaticIntervalMinutes(previousTask, task) {
+        if (task.type === 'pill') return 30;
+        if (previousTask && previousTask.key === 'morning-pill' && task.key === 'breakfast') return 30;
+        return 240;
     }
 
-    // 체크 시각의 순서를 날짜별로 기록합니다.
+    // 과거 저장 기록과의 호환성을 위해 체크 순서 정보는 그대로 유지합니다.
     function nextCheckOrder(day) {
         const orders = makeTasks(day).map(task => Number(getOption(checkOrderPath(day, task.key))) || 0);
         return Math.max(Date.now(), ...orders.map(n => n + 1));
     }
 
-    // 수동으로 지정한 시간은 자동 계산으로 덮어쓰지 않습니다.
-    // 구버전에서 입력한 시간에는 time_modes가 없으므로 수동 설정으로 취급합니다.
+    // 휠에서 직접 선택한 시각은 체크할 때도 변경하지 않습니다.
+    // 이전 버전에는 time_modes가 없으므로 저장된 시간은 수동 입력으로 취급합니다.
     function hasManualTime(day, task) {
         const mode = getOption(timeModePath(day, task.key));
         const time = getOption(timePath(day, task.key));
@@ -441,20 +443,19 @@
         return typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
     }
 
-    // 저장된 체크 기록과 수동 시간을 기준으로, 미체크 항목의 시간을 미리 표시합니다.
-    // 다음 항목이 약이면 30분 뒤, 그 외 식사·간식이면 4시간 뒤입니다.
-    // 이 미리보기 값은 체크할 때만 저장합니다.
-    // 복원된 구버전 데이터에 체크 순서(check_order)가 없어도 정상 계산됩니다.
+    // 새 날은 첫 번째 약 00:00을 기준으로 모든 미체크 항목에 예정 시간을 표시합니다.
+    // 이미 체크한 시간과 수동 설정 시간은 그대로 두고, 다음 미체크 항목만 재계산합니다.
+    // 자동 예정 시간은 체크만으로 저장하지 않습니다. 체크한 시점의 실제 시각을 저장합니다.
     function getDayTimeSchedule(day) {
         const schedule = {};
         let previousTime = null;
+        let previousTask = null;
 
         for (const task of makeTasks(day)) {
             const stored = getOption(timePath(day, task.key));
             const mode = getOption(timeModePath(day, task.key));
             const checked = getChecked(legacyId(day, task));
 
-            // 운동은 자동 시간 계산에서 완전히 제외합니다.
             if (!isAutoTimeTarget(task)) {
                 schedule[task.key] = {time: isValidTime(stored) ? stored : '00:00', kind: 'excluded'};
                 continue;
@@ -463,26 +464,23 @@
             let time;
             let kind;
             if (isValidTime(stored) && (mode !== 'auto' || checked)) {
-                // 수동 설정 또는 이미 체크하고 저장해 둔 자동 시간입니다.
                 time = stored;
                 kind = mode === 'auto' ? 'checked-auto' : 'manual';
             } else if (checked && isValidTime(task.t)) {
-                // 과거 버전에서 기록만 있고 시간 정보가 없는 경우도 처리합니다.
+                // 구버전 데이터에 체크만 있고 시간이 없으면 원래 시간 사용.
                 time = task.t;
                 kind = 'legacy';
             } else if (previousTime !== null) {
-                // 앞 항목의 시간을 기준으로, 현재 항목의 종류에 맞는 간격을 적용합니다.
-                time = addMinutes(previousTime, automaticIntervalMinutes(task));
+                time = addMinutes(previousTime, automaticIntervalMinutes(previousTask, task));
                 kind = 'preview';
             } else {
                 time = '00:00';
-                kind = 'empty';
+                kind = 'preview';
             }
 
             schedule[task.key] = {time, kind};
-            // 처음부터 미체크·미설정인 구간은 00:00을 유지합니다.
-            // 한 번 기준 시간이 정해지면 뒤 항목까지 종류별 간격으로 이어집니다.
-            if (kind !== 'empty') previousTime = time;
+            previousTime = time;
+            previousTask = task;
         }
         return schedule;
     }
@@ -533,22 +531,18 @@
     function onCheckChanged(input) {
         const day = curD;
         const task = makeTasks(day).find(item => legacyId(day, item) === input.id);
-        // 현재 화면에 미리 표시된 값을 체크하는 순간의 예약 시간으로 확정합니다.
-        // 복원된 구버전의 시간도 이전 체크 항목으로 사용합니다.
-        const suggested = task ? getDayTimeSchedule(day)[task.key] : null;
         pendingChecks[input.id] = input.checked;
 
         if (task && isAutoTimeTarget(task)) {
             if (input.checked) {
                 if (!hasManualTime(day, task)) {
-                    const chosenTime = suggested && suggested.kind !== 'empty'
-                        ? suggested.time : currentTimeInTenMinutes();
-                    setOption(timePath(day, task.key), chosenTime);
+                    // 미리 표시된 자동 예정 시간 대신 실제 체크한 현재 시각을 저장합니다.
+                    setOption(timePath(day, task.key), currentTimeInTenMinutes());
                     setOption(timeModePath(day, task.key), 'auto');
                 }
                 setOption(checkOrderPath(day, task.key), nextCheckOrder(day));
             } else {
-                // 수동 입력은 보존하고 자동으로 확정한 값만 해제합니다.
+                // 자동으로 기록한 시각은 해제하고, 직접 입력한 시간은 보존합니다.
                 if (getOption(timeModePath(day, task.key)) === 'auto') {
                     setOption(timePath(day, task.key), null);
                     setOption(timeModePath(day, task.key), null);
@@ -557,7 +551,6 @@
             }
         }
 
-        // 다음 미체크 항목의 자동 미리보기도 즉시 갱신합니다.
         renderTasks();
         document.querySelectorAll('.d-btn').forEach((btn, index) => {
             btn.classList.toggle('done', checkDayDone((curW - 1) * 7 + index + 1));
