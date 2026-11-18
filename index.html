@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cloud Switch-On Dash</title><script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=177027"></script><script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <title>Cloud Switch-On Dash</title><script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=180178"></script><script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <style>
@@ -391,10 +391,10 @@
         </div>`;
     }
 
-    // 자동 시간 계산: 날짜별로 약 00:00에서 시작하며, 기본 미리보기는 DB에 저장하지 않습니다.
-    // 첫 약 -> 아침: +30분, 식사/간식 -> 약: +30분,
-    // 나머지 식사/간식 간격: +4시간(점심 약 -> 간식 포함).
-    // 운동은 시간 자동 계산에서 제외합니다.
+    // 자동 시간 계산: 새로운 날의 첫 약은 00:00부터 시작합니다.
+    // 첫 약 -> 아침 = 30분, 식사/간식 -> 약 = 30분,
+    // 아침 -> 점심, 점심 약 -> 간식, 간식 -> 저녁 = 4시간.
+    // 운동은 자동 시간 계산에서 제외합니다.
     const timePath = (day, key) => `customizations/d${day}/times/${key}`;
     const timeModePath = (day, key) => `customizations/d${day}/time_modes/${key}`;
     const checkOrderPath = (day, key) => `customizations/d${day}/check_order/${key}`;
@@ -420,8 +420,11 @@
     }
 
     function automaticIntervalMinutes(previousTask, task) {
-        if (task.type === 'pill') return 30;
-        if (previousTask && previousTask.key === 'morning-pill' && task.key === 'breakfast') return 30;
+        // 도착 항목이 약이면 항상 30분 뒤입니다.
+        if (task.key === 'morning-pill' || task.key === 'lunch-pill' || task.key === 'night-pill') return 30;
+        // 하루 첫 번째 약을 먹은 뒤 아침을 먹는 경우도 30분 뒤입니다.
+        if (previousTask?.key === 'morning-pill' && task.key === 'breakfast') return 30;
+        // 그 밖의 식사·간식 간격은 4시간입니다.
         return 240;
     }
 
@@ -431,12 +434,13 @@
         return Math.max(Date.now(), ...orders.map(n => n + 1));
     }
 
-    // 휠에서 직접 선택한 시각은 체크할 때도 변경하지 않습니다.
-    // 이전 버전에는 time_modes가 없으므로 저장된 시간은 수동 입력으로 취급합니다.
+    // 휠에서 명시적으로 선택한 시각만 수동 설정으로 인정합니다.
+    // 구버전의 time_modes 없는 값은 자동 예정 시간이었을 수 있으므로
+    // 체크 시 현재 시각을 기록하고, 미체크 항목에는 새 간격을 적용합니다.
     function hasManualTime(day, task) {
         const mode = getOption(timeModePath(day, task.key));
         const time = getOption(timePath(day, task.key));
-        return mode !== 'auto' && isValidTime(time);
+        return mode === 'manual' && isValidTime(time);
     }
 
     function isValidTime(value) {
@@ -463,9 +467,12 @@
 
             let time;
             let kind;
-            if (isValidTime(stored) && (mode !== 'auto' || checked)) {
+            // 이미 완료했거나 사용자가 명시적으로 선택한 시각만 고정합니다.
+            // 이전 버전에서 time_modes 없이 남은 미체크 시간은 자동 예약 시각일
+            // 수 있으므로 고정하지 않고 최신 간격 규칙으로 다시 계산합니다.
+            if (isValidTime(stored) && (mode === 'manual' || checked)) {
                 time = stored;
-                kind = mode === 'auto' ? 'checked-auto' : 'manual';
+                kind = mode === 'manual' ? 'manual' : 'checked';
             } else if (checked && isValidTime(task.t)) {
                 // 구버전 데이터에 체크만 있고 시간이 없으면 원래 시간 사용.
                 time = task.t;
