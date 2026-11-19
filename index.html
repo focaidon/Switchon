@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#F8FAFC">
 <title>스위치온 체크</title>
-<script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=139609"></script>
+<script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=183845"></script>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -71,7 +71,16 @@ num,.num,.task-time,.ring-number,.metric-number,.day-number,.week-progress-capti
 .page-title{font-size:23px;letter-spacing:-.7px;font-weight:850;margin:0}
 .phase-badge{display:inline-flex;align-items:center;border-radius:20px;padding:5px 11px;background:var(--primary);color:#fff;font-weight:780;font-size:11px;white-space:nowrap}
 .page-title-group{display:flex;align-items:center;gap:11px}
-.header-info{font-size:11px;color:var(--muted)}
+/* 28일 전체 루틴 진행도: 선택한 날짜/주차가 아닌 실제 체크 항목으로 계산합니다. */
+.overall-progress{flex:1 1 260px;min-width:135px;max-width:720px;margin:0 3px}
+.overall-progress-line{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px;line-height:1.25}
+.overall-progress-name{font-size:11px;font-weight:850;color:#475569;white-space:nowrap}
+.overall-progress-details{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.overall-progress-percent{font-size:13px;color:var(--primary-deep);font-weight:900;white-space:nowrap;font-variant-numeric:tabular-nums}
+.overall-progress-track{height:9px;width:100%;border-radius:100px;background:#E2E8F0;overflow:hidden}
+.overall-progress-fill{height:100%;width:0;border-radius:100px;background:linear-gradient(90deg,#34D399,#10B981);transition:width .25s ease}
+.header-info{font-size:11px;color:var(--muted);white-space:nowrap}
+@media (min-width:1024px) and (max-width:1300px){.desktop-page-header .header-info{display:none}.overall-progress{min-width:125px;margin-left:6px}}
 .date-strip{display:flex;align-items:center;gap:9px;margin-bottom:20px}
 .calendar-nav{width:30px;height:34px;display:grid;place-items:center;background:#fff;border:1px solid var(--line);border-radius:9px;color:#475569;flex:none}
 .calendar-nav .i{width:16px;height:16px}
@@ -90,6 +99,7 @@ num,.num,.task-time,.ring-number,.metric-number,.day-number,.week-progress-capti
 .task-list{margin:0 20px 8px}
 .task-row{display:grid;grid-template-columns:67px minmax(0,1fr) 32px;gap:12px;align-items:center;min-height:58px;padding:8px 12px;border-bottom:1px solid var(--line);transition:background-color .14s}
 .task-row.checked{background:var(--mint);border-bottom-color:#DAF5E9}
+.task-row.resume-check{box-shadow:inset 4px 0 0 var(--primary)}
 .task-row.checked:first-child{border-radius:10px 10px 0 0}
 .task-row:last-child{border-bottom:0}
 .task-time{background:transparent;border:0;border-bottom:1px dashed transparent;color:#64748B;text-align:left;padding:6px 0;font-size:13px;font-weight:700;letter-spacing:-.2px;white-space:nowrap;font-variant-numeric:tabular-nums}
@@ -199,6 +209,8 @@ body.modal-open{overflow:hidden}
  .mobile-progress-line b{font-weight:760}.mobile-progress-line .value{color:var(--primary-deep);font-weight:800}
  .progress-track{height:7px;border-radius:100px;background:#E2E8F0;overflow:hidden}
  .progress-fill{height:100%;width:0;background:var(--primary);border-radius:100px;transition:width .2s}
+ .mobile-overall-progress{margin-top:11px;padding-top:10px;border-top:1px solid #F1F5F9}
+ .mobile-overall-progress .mobile-progress-line{margin-bottom:7px}
  .date-strip{gap:0;margin:0 -14px 14px;padding:0 14px}
  .date-strip .calendar-nav{display:none}
  .day-grid{display:flex;overflow-x:auto;scrollbar-width:none;gap:9px;padding:0 1px 6px;scroll-snap-type:x proximity}
@@ -316,9 +328,23 @@ body.modal-open{overflow:hidden}
       </div>
     </header>
     <div id="week-title" class="sr-only" role="status">연결 중...</div>
-    <div class="mobile-progress"><div class="mobile-progress-line"><b id="mobile-progress-caption">1주차: Day 1 / 7</b><span id="mobile-progress-value" class="value">14%</span></div><div class="progress-track"><div id="mobile-progress-fill" class="progress-fill"></div></div></div>
+    <div class="mobile-progress">
+      <div class="mobile-progress-line"><b id="mobile-progress-caption">1주차: Day 1 / 7</b><span id="mobile-progress-value" class="value">14%</span></div>
+      <div class="progress-track"><div id="mobile-progress-fill" class="progress-fill"></div></div>
+      <div class="mobile-overall-progress" role="group" aria-label="28일 전체 루틴 진행도">
+        <div class="mobile-progress-line"><b>전체 진행도 <span id="mobile-overall-details" style="color:#64748B;font-weight:550">0/221항목</span></b><span id="mobile-overall-percent" class="value">0%</span></div>
+        <div class="progress-track" role="progressbar" aria-label="전체 루틴 완료율" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="mobile-overall-track"><div id="mobile-overall-fill" class="progress-fill"></div></div>
+      </div>
+    </div>
     <div class="mobile-content">
-      <div class="desktop-page-header"><div class="page-title-group"><h1 class="page-title" id="desktop-day-title">Day 1 루틴</h1><span id="desktop-phase" class="phase-badge">집중기</span></div><span class="header-info">주차별 루틴 체크리스트</span></div>
+      <div class="desktop-page-header">
+        <div class="page-title-group"><h1 class="page-title" id="desktop-day-title">Day 1 루틴</h1><span id="desktop-phase" class="phase-badge">집중기</span></div>
+        <div class="overall-progress" role="group" aria-label="28일 전체 루틴 진행도">
+          <div class="overall-progress-line"><span class="overall-progress-name">전체 진행도</span><span id="overall-progress-details" class="overall-progress-details">0/221항목 · 0/28일 완료</span><strong id="overall-progress-percent" class="overall-progress-percent">0%</strong></div>
+          <div id="overall-progress-track" class="overall-progress-track" role="progressbar" aria-label="전체 루틴 완료율" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="overall-progress-fill" class="overall-progress-fill"></div></div>
+        </div>
+        <span class="header-info">주차별 루틴 체크리스트</span>
+      </div>
       <div class="date-strip"><button type="button" class="calendar-nav" id="day-prev" aria-label="이전 날짜" onclick="navigateDay(-1)"><svg class="i"><use href="#ic-arrow-left"/></svg></button><div id="day-grid" class="day-grid" aria-label="1주일 날짜 선택"></div><button type="button" id="day-next" class="calendar-nav" aria-label="다음 날짜" onclick="navigateDay(1)"><svg class="i"><use href="#ic-arrow-right"/></svg></button></div>
       <div class="mobile-summary"><section class="card mobile-fasting" id="mobile-fasting"></section><section class="card mobile-water" id="mobile-water"></section></div>
       <section class="card routine-card" id="routine-section">
@@ -389,6 +415,7 @@ body.modal-open{overflow:hidden}
     let accountActionBusy = false;
     let accountSettingsOpen = false;
     let accountDataLoaded = false; // Firebase 조회 전에는 계정 연결을 허용하지 않습니다.
+    let startupViewRestoredUid = null; // UID마다 최초 데이터 로드 때만 최근 체크 위치로 이동합니다.
     const info = ["", "1주: 몸의 스위치 켜기", "2주: 인슐린 저항성 개선", "3주: 체지방 감량 가속", "4주: 체지방 감량 가속"];
 
     // 원본의 체크박스 키를 유지하여 이미 저장한 기록과 호환됩니다.
@@ -714,6 +741,7 @@ body.modal-open{overflow:hidden}
             activeDatabaseRef = null;
             activeDatabaseCallback = null;
             boundUid = null;
+            startupViewRestoredUid = null;
             cloudData = {};
             pendingChecks = {};
             pendingOptions = {};
@@ -731,7 +759,16 @@ body.modal-open{overflow:hidden}
                     cloudData = snapshot.val() || {};
                     accountDataLoaded = true;
                     updateAccountSettings();
-                    if (document.getElementById('day-grid').innerHTML === '') setWeek(1);
+                    // Firebase 첫 조회 직후 최근 완료한 날짜로 이동합니다.
+                    // 이후 실시간 갱신에서는 사용자가 직접 선택한 날짜를 유지합니다.
+                    if (startupViewRestoredUid !== user.uid) {
+                        startupViewRestoredUid = user.uid;
+                        const last = findLastCheckedPosition();
+                        curD = last ? last.day : 1;
+                        curW = Math.ceil(curD / 7);
+                        setWeek(curW, false);
+                        if (last) focusLastCheckedRow(last);
+                    } else if (document.getElementById('day-grid').innerHTML === '') setWeek(1);
                     else renderGrid();
                 };
                 activeDatabaseRef.on('value', activeDatabaseCallback, error => {
@@ -795,6 +832,78 @@ body.modal-open{overflow:hidden}
         return makeTasks(day).every(task => getChecked(legacyId(day, task)));
     }
 
+    // 28일 전체에 걸친 실제 체크 기록을 집계합니다(운동 포함).
+    function getOverallProgress() {
+        let checked = 0, total = 0, finishedDays = 0;
+        for (let day = 1; day <= 28; day++) {
+            const tasks = makeTasks(day);
+            let dayChecked = 0;
+            for (const task of tasks) {
+                total++;
+                if (getChecked(legacyId(day, task))) { checked++; dayChecked++; }
+            }
+            if (dayChecked === tasks.length) finishedDays++;
+        }
+        return {checked, total, finishedDays, percent: total ? Math.round(checked / total * 100) : 0};
+    }
+
+    function renderOverallProgress() {
+        const {checked, total, finishedDays, percent} = getOverallProgress();
+        const detail = `${checked}/${total}항목 · ${finishedDays}/28일 완료`;
+        document.getElementById('overall-progress-details').textContent = detail;
+        document.getElementById('overall-progress-percent').textContent = `${percent}%`;
+        document.getElementById('overall-progress-fill').style.width = `${percent}%`;
+        document.getElementById('overall-progress-track').setAttribute('aria-valuenow', String(percent));
+        document.getElementById('mobile-overall-details').textContent = `${checked}/${total}항목 · ${finishedDays}일 완료`;
+        document.getElementById('mobile-overall-percent').textContent = `${percent}%`;
+        document.getElementById('mobile-overall-fill').style.width = `${percent}%`;
+        document.getElementById('mobile-overall-track').setAttribute('aria-valuenow', String(percent));
+    }
+
+    // 체크 시간 메타데이터가 있으면 가장 최근 항목을 선택합니다.
+    // 과거 복원 기록처럼 체크 순서가 없다면 가장 뒤의 완료 날짜·항목을 기준으로 합니다.
+    // 기존 Firebase 기록을 옮기거나 새 값을 강제로 저장하지 않습니다.
+    function findLastCheckedPosition() {
+        let latestTimed = null;
+        let latestLegacy = null;
+        for (let day = 1; day <= 28; day++) {
+            const tasks = makeTasks(day);
+            tasks.forEach((task, index) => {
+                if (!getChecked(legacyId(day, task))) return;
+                const pos = {day, key: task.key, index};
+                const stamp = Number(getOption(checkOrderPath(day, task.key)));
+                if (Number.isFinite(stamp) && stamp > 0) {
+                    if (!latestTimed || stamp > latestTimed.stamp ||
+                        (stamp === latestTimed.stamp && (day > latestTimed.day || (day === latestTimed.day && index > latestTimed.index)))) {
+                        latestTimed = {...pos, stamp};
+                    }
+                } else if (!latestLegacy || day > latestLegacy.day ||
+                           (day === latestLegacy.day && index > latestLegacy.index)) {
+                    latestLegacy = pos;
+                }
+            });
+        }
+        return latestTimed || latestLegacy;
+    }
+
+    function focusLastCheckedRow(position) {
+        // 화면이 구성된 다음 마지막 체크 행이 보이도록 필요한 경우에만 이동합니다.
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (curD !== position.day || document.body.dataset.mobileTab !== 'today') return;
+            const row = Array.from(document.querySelectorAll('#task-card .task-row'))
+                .find(el => el.dataset.taskKey === position.key);
+            if (!row) return;
+            row.classList.add('resume-check');
+            const dayButton = Array.from(document.querySelectorAll('#day-grid .day-card'))
+                .find(button => Number(button.dataset.day) === position.day);
+            // 가로 달력은 선택 날짜로 이동하되 세로 스크롤은 체크 행을 기준으로 합니다.
+            if (dayButton && window.matchMedia('(max-width:1023px)').matches) {
+                document.getElementById('day-grid').scrollLeft = Math.max(0, dayButton.offsetLeft - document.getElementById('day-grid').offsetLeft - 10);
+            }
+            row.scrollIntoView({block:'nearest', inline:'nearest', behavior:'instant'});
+        }));
+    }
+
     function renderGrid(){
       const grid=document.getElementById('day-grid');
       grid.innerHTML='';
@@ -803,6 +912,7 @@ body.modal-open{overflow:hidden}
         const selected=day===curD;
         const btn=document.createElement('button');
         btn.type='button';
+        btn.dataset.day=String(day);
         btn.className=`day-card d-btn ${selected?'active':''} ${done?'done':''}`;
         btn.setAttribute('aria-pressed',String(selected));
         btn.setAttribute('aria-label',`Day ${day}${done?', 완료':''}${selected?', 선택 중':''}`);
@@ -812,6 +922,7 @@ body.modal-open{overflow:hidden}
       }
       renderWeekChrome();
       renderTasks();
+      renderOverallProgress();
       renderGuides();
       renderWeight();
       renderWaterWidgets();
@@ -968,7 +1079,7 @@ body.modal-open{overflow:hidden}
         const checked=getChecked(id);
         const time=schedule[task.key]?.time||'00:00';
         const workout=task.key==='exercise';
-        return `<div class="task-row ${checked?'checked':''} ${workout?'task-work':''}">
+        return `<div class="task-row ${checked?'checked':''} ${workout?'task-work':''}" data-task-key="${task.key}">
           <button type="button" class="task-time" aria-label="${htmlEscape(task.l)} 시간 변경" title="시간 변경" onclick="openTimePicker('${task.key}')">${htmlEscape(time)}</button>
           <div class="task-center">
             <label class="task-category task-category--${task.type}" for="${id}"><span class="task-category-icon" aria-hidden="true">${task.icon}</span><span>${htmlEscape(task.l)}</span></label>
@@ -1002,15 +1113,16 @@ body.modal-open{overflow:hidden}
       const task=makeTasks(day).find(item=>legacyId(day,item)===input.id);
       pendingChecks[input.id]=input.checked;
       autoSaveBlocked=false;
-      if(task&&isAutoTimeTarget(task)){
+      if(task){
         if(input.checked){
-          if(!hasManualTime(day,task)){
+          // 운동까지 포함해 가장 최근 체크한 항목을 기록합니다.
+          if(isAutoTimeTarget(task) && !hasManualTime(day,task)){
             setOption(timePath(day,task.key),currentTimeInTenMinutes());
             setOption(timeModePath(day,task.key),'auto');
           }
           setOption(checkOrderPath(day,task.key),nextCheckOrder(day));
         }else{
-          if(getOption(timeModePath(day,task.key))==='auto'){
+          if(isAutoTimeTarget(task) && getOption(timeModePath(day,task.key))==='auto'){
             setOption(timePath(day,task.key),null);
             setOption(timeModePath(day,task.key),null);
           }
