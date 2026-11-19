@@ -1,214 +1,344 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cloud Switch-On Dash</title><script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=106210"></script><script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-    <style>
-        :root {
-            --w1: #2ECC71; --w2: #F1C40F; --w3: #3498DB; --w4: #9B59B6;
-            --bg: #F4F7F6; --text: #2C3E50;
-            --meal-bg: #E8F5E9; --meal-txt: #2E7D32;
-            --pill-bg: #FFF3E0; --pill-txt: #EF6C00;
-            --work-bg: #E3F2FD; --work-txt: #1565C0;
-            --fast-bg: #FFEBEE; --fast-txt: #C62828;
-        }
-        /* 사파리 스와이프 및 터치 최적화 */
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: pan-y; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; overflow-x: hidden; }
-        .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; }
-        .progress-container { flex: 1; margin-left: 15px; background: #DDD; height: 6px; border-radius: 3px; }
-        #prog-bar { height: 100%; border-radius: 3px; transition: 0.3s; width: 0%; }
-        .week-tabs { display: flex; gap: 5px; margin-bottom: 10px; }
-        .w-tab { flex: 1; padding: 8px; border-radius: 8px; font-size: 11px; font-weight: 800; text-align: center; cursor: pointer; opacity: 0.6; }
-        .w-tab.active { opacity: 1; color: white; }
-        .w-tab:nth-child(1) { background: var(--w1); } .w-tab:nth-child(2) { background: var(--w2); }
-        .w-tab:nth-child(3) { background: var(--w3); } .w-tab:nth-child(4) { background: var(--w4); }
-        .day-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 15px; }
-        .d-btn { padding: 10px 0; background: white; border-radius: 8px; text-align: center; border: 1px solid #EEE; cursor: pointer; }
-        .d-btn.active { border: 2px solid #333; font-weight: 800; }
-        .d-btn .dot { width: 4px; height: 4px; border-radius: 50%; background: #CCC; margin: 4px auto 0; }
-        .d-btn.done .dot { background: var(--w1); }
-        .card { background: white; border-radius: 15px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 100px; }
-        .card-title { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #F4F7F6; padding-bottom: 10px; margin-bottom: 12px; }
-        .phase-label { font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 5px; }
-        .task { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #FAFAFA; cursor: pointer; }
-        .task input { width: 20px; height: 20px; margin-right: 12px; accent-color: #333; flex-shrink: 0; }
-        .time-tag { font-size: 10px; color: #999; width: 42px; flex-shrink: 0; }
-        .badge { font-size: 10px; padding: 3px 6px; border-radius: 6px; margin-right: 8px; font-weight: 800; flex-shrink: 0; display: inline-flex; align-items: center; gap: 3px; }
-        .badge-meal { background: var(--meal-bg); color: var(--meal-txt); }
-        .badge-pill { background: var(--pill-bg); color: var(--pill-txt); }
-        .badge-work { background: var(--work-bg); color: var(--work-txt); }
-        .badge-fast { background: var(--fast-bg); color: var(--fast-txt); }
-        .task-txt { font-size: 14px; font-weight: 600; color: #334155; }
-        .action-bar {
-            position: fixed;
-            bottom: 20px;
-            left: 15px;
-            right: 15px;
-            display: flex;
-            gap: 10px;
-            z-index: 1000;
-        }
-        .action-btn {
-            border: none;
-            border-radius: 12px;
-            padding: 18px 12px;
-            font-weight: 700;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .save-btn {
-            flex: 1;
-            background: #333;
-            color: white;
-        }
-        .reset-btn {
-            width: 110px;
-            background: #FFFFFF;
-            color: #C62828;
-            border: 1px solid #FFCDD2;
-        }
-        .action-btn:disabled {
-            opacity: 0.55;
-            cursor: not-allowed;
-        }
-
-        /* Google 계정 연결: 기존 익명 기록을 유지하면서 여러 기기에서 이용 */
-        .account-panel { background: #fff; padding: 12px; border: 1px solid #E3EAF0; border-radius: 12px;
-            margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-        .account-panel[hidden] { display: none !important; }
-        .account-state { font-size: 12px; font-weight: 700; color: #475569; overflow-wrap: anywhere; }
-        .account-help { font-size: 11px; color: #64748B; line-height: 1.5; margin-top: 3px; }
-        .account-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-        .account-btn { border: 1px solid #CBD5E1; padding: 9px 10px; border-radius: 9px;
-            font-size: 12px; font-weight: 750; background: #F8FAFC; color: #24344B; cursor: pointer; }
-        .account-btn-primary { border-color: #1D4ED8; background: #1D4ED8; color: #fff; }
-        .account-btn:disabled { opacity: .55; cursor: wait; }
-        .account-btn[hidden] { display: none !important; }
-        @media (max-width: 600px) { .account-panel { align-items: stretch; }
-            .account-actions { width: 100%; }
-            .account-btn { flex: 1 1 auto; } }
-
-        /* 일정 시간 및 운동 선택 */
-        .task { cursor: default; gap: 0; }
-        .task input[type="checkbox"] { margin-right: 12px; cursor: pointer; }
-        .task .task-txt { cursor: pointer; min-width: 0; }
-        .time-tag {
-            background: none; border: 0; border-bottom: 1px dashed #B1BDC7;
-            border-radius: 0; color: #59677A; font: inherit; font-size: 11px;
-            width: 48px; min-width: 48px; padding: 8px 1px; margin-right: 4px;
-            text-align: left; cursor: pointer; font-variant-numeric: tabular-nums;
-        }
-        .time-tag:focus-visible, .workout-select:focus-visible { outline: 2px solid #3498DB; outline-offset: 3px; }
-        .workout-controls { display: flex; align-items: center; gap: 6px; flex: 0 1 auto; min-width: 0; flex-wrap: wrap; }
-        .workout-select { background: #F8FAFC; border: 1px solid #D7E2ED; border-radius: 8px;
-            color: #24344B; padding: 7px 3px; font-weight: 650; font-size: 12px; cursor: pointer;
-            max-width: 100%; min-width: 0; }
-        .workout-type { flex: 0 0 134px; width: 134px; }
-        .workout-part { flex: 0 0 80px; width: 80px; }
-        .workout-original { color: #64748B; font-size: 11px; margin-top: 5px; }
-        .task-work .badge { margin-right: 6px; }
-        .wheel-modal[hidden] { display: none !important; }
-        .wheel-modal { position: fixed; inset: 0; z-index: 3000; background: rgba(15,23,42,.55);
-            display: flex; align-items: flex-end; justify-content: center; }
-        .wheel-sheet { background: white; width: 100%; max-width: 440px;
-            border-radius: 20px 20px 0 0; padding: 15px 18px max(20px,env(safe-area-inset-bottom));
-            box-shadow: 0 -8px 35px rgba(0,0,0,.14); }
-        .wheel-title { font-size: 16px; font-weight: 800; text-align: center; margin: 4px 0 14px; }
-        .wheel-wrap { display: flex; justify-content: center; align-items: center; gap: 10px; }
-        .wheel-pane { position: relative; width: min(38%, 125px); height: 220px; }
-        .wheel-pane::before { content: ''; position: absolute; pointer-events: none; z-index: 1;
-            left: 0; right: 0; top: 88px; height: 44px; background: #EFF6FF;
-            border-top: 1px solid #BFDBFE; border-bottom: 1px solid #BFDBFE; border-radius: 8px; }
-        .wheel-list { height: 220px; overflow-y: auto; overscroll-behavior: contain;
-            scroll-snap-type: y mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch;
-            padding: 88px 0; }
-        .wheel-list::-webkit-scrollbar { display:none; }
-        .wheel-item { display: flex; justify-content: center; align-items: center;
-            height: 44px; width: 100%; padding: 0; border: 0; background: transparent;
-            color: #94A3B8; font: inherit; font-size: 17px; cursor: pointer;
-            scroll-snap-align: center; scroll-snap-stop: always; position: relative; z-index: 2; }
-        .wheel-item.selected { color: #172554; font-size: 22px; font-weight: 800; }
-        .wheel-colon { font-weight: 800; font-size: 23px; }
-        .wheel-caption { font-size: 11px; color: #64748B; text-align: center; margin-top: 6px; }
-        .wheel-actions { display: flex; gap: 10px; margin-top: 17px; }
-        .wheel-actions button { border: 0; border-radius: 10px; padding: 13px 8px; font-size: 14px;
-            font-weight: 700; cursor: pointer; }
-        .wheel-cancel { flex: 1; background: #EEF2F7; color: #334155; }
-        .wheel-confirm { flex: 2; background: #1E293B; color: white; }
-        body.modal-open { overflow: hidden; }
-        @media (max-width: 600px) {
-            .task-work { flex-wrap: wrap; }
-            .task-work .workout-controls { flex: 0 0 100%; margin-top: 8px; padding-left: 0; }
-            .workout-type { flex-basis: 134px; }
-        }
-        @media (max-width: 360px) {
-            .card { padding: 12px; }
-            .task input[type="checkbox"] { margin-right: 8px; }
-            .time-tag { width: 44px; min-width: 44px; font-size: 10px; }
-            .badge { margin-right: 5px; padding: 3px 4px; }
-            .workout-controls { column-gap: 4px; }
-            .workout-select { font-size: 11px; }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#F8FAFC">
+<title>스위치온 체크</title>
+<script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=124683"></script>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+<style>
+:root{--bg:#F8FAFC;--surface:#FFFFFF;--line:#E2E8F0;--ink:#0F172A;--muted:#64748B;--primary:#10B981;--primary-deep:#059669;--mint:#ECFDF5;--blue:#3B82F6;--red:#EF4444;--amber:#F59E0B;--shadow:0 3px 14px rgba(15,23,42,.045);--radius:16px;color-scheme:light}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);font-family:Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+button,select,input{font:inherit}
+button{cursor:pointer}button:disabled{opacity:.52;cursor:not-allowed}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #93C5FD;outline-offset:2px}
+input,button,select{touch-action:manipulation}
+[hidden]{display:none!important}
+num,.num,.task-time,.ring-number,.metric-number,.day-number,.week-progress-caption,.progress-line,svg text{font-variant-numeric:tabular-nums}
+.sr-only{position:absolute!important;width:1px;height:1px;clip:rect(0,0,0,0);overflow:hidden;white-space:nowrap}
+.i{width:19px;height:19px;display:inline-block;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.app-layout{max-width:1700px;margin:0 auto;min-height:100vh;display:grid;grid-template-columns:260px minmax(0,1fr) 306px;gap:22px;padding:24px 22px 48px;align-items:start}
+.sidebar{min-width:0;position:sticky;top:24px;max-height:calc(100vh - 48px);overflow:auto;padding:6px 3px 12px;scrollbar-width:thin}
+.brand{display:flex;gap:9px;align-items:center;font-size:21px;letter-spacing:-.65px;font-weight:850;white-space:nowrap}
+.brand-mark{width:24px;height:14px;background:var(--primary);border-radius:30px;position:relative;display:inline-block;flex:none}
+.brand-mark:after{content:'';position:absolute;width:10px;height:10px;border-radius:50%;background:white;top:2px;right:2px;box-shadow:0 1px 2px #056e5533}
+.sidebar-account-slot{margin-top:23px}
+.account-panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
+.account-summary{display:flex;flex-direction:column;align-items:stretch;gap:12px}
+.account-identity{display:flex;gap:10px;min-width:0;align-items:center}
+.account-avatar{width:38px;height:38px;display:grid;place-items:center;background:#F1F5F9;border-radius:50%;color:#94A3B8;flex:none}
+.account-avatar .i{width:24px;height:24px}
+.account-state{font-weight:750;font-size:12px;line-height:1.55;overflow-wrap:anywhere}
+.account-help{font-size:11px;color:var(--muted);line-height:1.5;margin-top:3px}
+.account-actions{display:flex;gap:7px;flex-wrap:wrap}
+.account-btn{border:1px solid var(--line);background:#fff;border-radius:9px;color:#334155;padding:9px 11px;font-size:12px;font-weight:750;min-height:36px;flex:1}
+.account-btn-primary{background:var(--primary);color:white;border-color:var(--primary)}
+.account-btn-primary:hover,.primary-btn:hover{background:var(--primary-deep)}
+.account-settings{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+.account-settings-title{font-weight:800;font-size:13px;margin-bottom:7px}
+.account-settings-desc,.account-record-status{color:var(--muted);font-size:12px;line-height:1.6;margin:6px 0}
+#google-link-btn{width:100%;margin-top:7px}
+#google-signout-btn{margin-top:9px;width:100%}
+.side-section-label{font-size:11px;font-weight:800;letter-spacing:.09em;color:#94A3B8;margin:26px 12px 10px}
+.week-nav{display:flex;flex-direction:column;gap:8px}
+.week-nav-btn{border:1px solid transparent;background:#F1F5F9;border-radius:12px;text-align:left;padding:13px;min-height:54px;color:#334155;transition:background .15s,border-color .15s}
+.week-nav-btn.active{background:linear-gradient(145deg,#10B981,#05A778);color:white;box-shadow:0 5px 15px rgba(16,185,129,.16)}
+.week-nav-btn .week-label{font-weight:800;font-size:13px;display:block;line-height:1.4}
+.week-nav-btn .week-sub{font-size:11px;opacity:.76;line-height:1.4;margin-top:4px;display:block}
+.week-nav-btn .week-meter{width:100%;height:6px;border-radius:20px;background:#ffffff50;margin:10px 0 7px;overflow:hidden}
+.week-nav-btn .week-meter-inner{height:100%;background:white;border-radius:20px}
+.week-nav-btn .week-progress-caption{font-size:11px;opacity:.95}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.fasting-panel{margin-top:38px;padding:18px 15px;text-align:center}
+.widget-title{font-size:14px;font-weight:830;letter-spacing:-.2px;display:flex;gap:7px;align-items:center}
+.fasting-panel .widget-title{margin-bottom:16px;justify-content:flex-start}
+.fasting-graphic{display:flex;flex-direction:column;align-items:center;gap:8px}
+.ring{width:146px;height:146px;border-radius:50%;background:conic-gradient(var(--primary) var(--pct),#E2E8F0 0);display:grid;place-items:center;position:relative}
+.ring:before{content:'';position:absolute;inset:12px;border-radius:50%;background:white}
+.ring-inner{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.ring-number{font-size:25px;font-weight:850;letter-spacing:-1.3px}
+.ring-goal{font-size:12px;color:var(--muted)}
+.fasting-note{font-size:11px;color:var(--primary-deep);font-weight:750;min-height:14px;text-align:center}
+.widget-link{background:transparent;color:var(--muted);border:0;font-size:11px;font-weight:720;text-decoration:underline;text-underline-offset:3px;margin-top:9px;padding:5px}
+.main-column{min-width:0}
+.desktop-page-header{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:7px 0 23px}
+.page-title{font-size:23px;letter-spacing:-.7px;font-weight:850;margin:0}
+.phase-badge{display:inline-flex;align-items:center;border-radius:20px;padding:5px 11px;background:var(--primary);color:#fff;font-weight:780;font-size:11px;white-space:nowrap}
+.page-title-group{display:flex;align-items:center;gap:11px}
+.header-info{font-size:11px;color:var(--muted)}
+.date-strip{display:flex;align-items:center;gap:9px;margin-bottom:20px}
+.calendar-nav{width:30px;height:34px;display:grid;place-items:center;background:#fff;border:1px solid var(--line);border-radius:9px;color:#475569;flex:none}
+.calendar-nav .i{width:16px;height:16px}
+.day-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:9px;flex:1;min-width:0}
+.day-card{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:5px;min-height:102px;background:var(--surface);border:1px solid var(--line);border-radius:12px;color:#334155;padding:9px 2px;box-shadow:0 2px 4px rgba(15,23,42,.035);white-space:nowrap}
+.day-card .day-prefix{color:var(--muted);font-size:12px}
+.day-card .day-number{font-size:25px;line-height:1;font-weight:800}
+.day-card .day-mark{font-size:11px;color:var(--muted);min-height:14px}
+.day-card.done{background:#F1FCF7;border-color:#ABEFDA;color:#047857}
+.day-card.done .day-prefix,.day-card.done .day-mark{color:#047857}
+.day-card.active{border:2px solid var(--primary);box-shadow:0 3px 9px #10b98125;color:#047857;padding:8px 1px}
+.routine-card{overflow:hidden}
+.routine-heading{padding:20px 21px 15px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.routine-heading h2{font-size:18px;letter-spacing:-.5px;margin:0;font-weight:850}
+.routine-heading .routine-count{font-size:12px;color:var(--muted)}
+.task-list{margin:0 20px 8px}
+.task-row{display:grid;grid-template-columns:67px minmax(0,1fr) 32px;gap:12px;align-items:center;min-height:58px;padding:8px 12px;border-bottom:1px solid var(--line);transition:background-color .14s}
+.task-row.checked{background:var(--mint);border-bottom-color:#DAF5E9}
+.task-row.checked:first-child{border-radius:10px 10px 0 0}
+.task-row:last-child{border-bottom:0}
+.task-time{background:transparent;border:0;border-bottom:1px dashed transparent;color:#64748B;text-align:left;padding:6px 0;font-size:13px;font-weight:700;letter-spacing:-.2px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.task-time:hover{color:var(--primary-deep);border-bottom-color:var(--primary)}
+.task-center{display:flex;gap:9px;align-items:center;min-width:0}
+.task-icon{font-size:18px;line-height:1.25;flex:none}
+.task-detail{font-size:13px;font-weight:630;min-width:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.task-detail label{cursor:pointer}
+.task-detail .task-sub{font-size:11px;color:var(--muted);font-weight:450}
+.task-checked input{appearance:none;width:19px;height:19px;border:2px solid #CBD5E1;border-radius:5px;display:block;margin:0 auto;background:white;cursor:pointer;position:relative}
+.task-checked input:checked{background:var(--primary);border-color:var(--primary)}
+.task-checked input:checked:after{content:'';position:absolute;width:9px;height:5px;border:solid white;border-width:0 0 2px 2px;transform:rotate(-45deg);top:4px;left:3px}
+.workout-controls{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0}
+.workout-select{border:1px solid #D6DFEB;background:#F8FAFC;border-radius:8px;padding:6px 8px;color:#334155;font-weight:670;font-size:12px;max-width:100%;min-width:0}
+.workout-type{width:134px;flex:0 0 134px}.workout-part{width:85px;flex:0 0 85px}
+.water-inline{padding:14px 22px;border-top:1px solid var(--line)}
+.water-widget{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.water-widget .widget-title{font-size:13px;flex:none;min-width:98px}
+.water-widget .water-drops{display:flex;align-items:center;gap:4px}
+.drop-btn{background:none;border:0;padding:2px;color:#CBD5E1;display:grid;place-items:center}
+.drop-btn .i{width:19px;height:23px;stroke-width:0;fill:currentColor}
+.drop-btn.filled{color:var(--blue)}
+.water-number{font-size:12px;font-weight:750;white-space:nowrap}
+.water-number span{color:var(--muted);font-weight:450}
+.water-add{display:grid;place-items:center;width:30px;height:30px;background:#fff;color:#64748B;border:1px solid #CBD5E1;border-radius:9px}
+.water-add .i{width:16px;height:16px}
+.action-footer{border-top:1px solid var(--line);background:#F8FAFC;padding:13px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.action-info{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
+.save-state{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.save-state .status-dot{width:7px;height:7px;border-radius:50%;background:var(--primary)}
+.reset-text{font-size:12px;color:var(--muted);border:0;background:transparent;padding:5px}
+.reset-text:hover{color:var(--red)}
+.primary-btn{background:var(--primary);border:1px solid var(--primary);border-radius:9px;color:#fff;font-size:13px;font-weight:800;min-height:36px;padding:8px 16px;white-space:nowrap}
+.right-sidebar{display:flex;flex-direction:column;gap:18px;min-width:0}
+.right-sidebar .card{padding:20px}
+.info-card h3{margin:0 0 13px;font-weight:830;font-size:15px;letter-spacing:-.3px}
+.info-card .guide-sub{font-size:12px;color:var(--muted);margin-top:-8px;margin-bottom:16px}
+.guide-list{padding-left:16px;margin:0;font-size:12px;line-height:1.85;color:#475569}
+.guide-list li::marker{color:#64748B}
+.food-filters{display:flex;gap:5px;justify-content:space-between;padding:5px;background:#F1F5F9;border-radius:9px;margin-bottom:15px}
+.food-filter{min-width:0;flex:1;border:0;background:transparent;border-radius:7px;padding:8px 3px;font-size:11px;font-weight:760;color:#64748B;white-space:nowrap}
+.food-filter.active{background:white;box-shadow:0 1px 4px #3341551b;color:#334155}
+.food-display{font-size:12px;line-height:1.8;color:#475569;min-height:86px}
+.food-status{font-weight:820;font-size:12px;margin-bottom:4px}
+.food-note{font-size:10px;line-height:1.5;color:#94A3B8;margin-top:10px}
+.weight-chart{height:125px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:#FCFEFF;margin:4px 0 12px}
+.weight-chart svg{width:100%;height:118px}
+.chart-empty{color:#94A3B8;font-size:12px;text-align:center;line-height:1.6}
+.weight-form{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.weight-form input{width:112px;min-width:0;padding:9px;border:1px solid var(--line);border-radius:8px;font-size:12px}
+.weight-form .primary-btn{font-size:12px;min-height:34px;padding:8px 11px}
+.weight-detail{margin-top:9px;color:var(--muted);font-size:11px}
+.mobile-header,.mobile-progress,.mobile-summary,.mobile-tabs,.mobile-account-view{display:none}
+.mobile-content{display:contents}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:10px 16px;border-radius:12px;background:#0F172A;color:white;font-size:12px;z-index:5000;box-shadow:0 7px 22px #0f172a32;pointer-events:none;max-width:calc(100vw - 36px);text-align:center}
+.wheel-modal{position:fixed;inset:0;z-index:3000;background:rgba(15,23,42,.52);display:flex;justify-content:center;align-items:flex-end}
+.wheel-sheet{background:white;width:100%;max-width:440px;border-radius:22px 22px 0 0;padding:18px 20px max(22px,env(safe-area-inset-bottom));box-shadow:0 -12px 35px rgba(0,0,0,.18)}
+.wheel-title{text-align:center;font-weight:800;font-size:16px;margin-bottom:14px}
+.wheel-wrap{display:flex;align-items:center;justify-content:center;gap:12px}
+.wheel-pane{position:relative;width:min(40%,128px);height:220px}
+.wheel-pane:before{content:'';position:absolute;left:0;right:0;top:88px;height:44px;background:var(--mint);border-top:1px solid #A7F3D0;border-bottom:1px solid #A7F3D0;border-radius:9px;pointer-events:none}
+.wheel-list{height:220px;overflow-y:auto;overscroll-behavior:contain;scroll-snap-type:y mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:88px 0}
+.wheel-list::-webkit-scrollbar{display:none}
+.wheel-item{width:100%;height:44px;background:transparent;border:0;color:#94A3B8;font-weight:620;font-size:17px;display:flex;justify-content:center;align-items:center;scroll-snap-align:center;scroll-snap-stop:always}
+.wheel-item.selected{color:var(--primary-deep);font-size:23px;font-weight:850}
+.wheel-colon{font-weight:850;font-size:22px}.wheel-caption{text-align:center;font-size:11px;color:var(--muted);margin-top:5px}
+.wheel-actions{display:flex;gap:8px;margin-top:17px}.wheel-actions button{border:0;border-radius:10px;min-height:44px;font-size:13px;font-weight:800}
+.wheel-cancel{flex:1;background:#F1F5F9;color:#475569}.wheel-confirm{flex:2;background:var(--primary);color:white}
+body.modal-open{overflow:hidden}
+.fasting-dialog{border:1px solid var(--line);border-radius:16px;background:white;color:var(--ink);padding:22px;width:min(380px,calc(100vw - 32px));box-shadow:0 18px 65px #0f172a2b}
+.fasting-dialog::backdrop{background:rgba(15,23,42,.48)}
+.fasting-dialog h3{margin:0 0 8px;font-size:18px}.fasting-dialog p{font-size:12px;color:var(--muted);line-height:1.6}
+.fasting-dialog label{display:block;font-size:12px;font-weight:800;margin:16px 0 7px}
+.fasting-dialog input{width:100%;padding:11px;border:1px solid var(--line);border-radius:9px}
+.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:17px}.secondary-btn{background:#F1F5F9;color:#334155;border:0;border-radius:9px;padding:9px 14px;font-size:12px;font-weight:750}
+@media(max-width:1230px) and (min-width:1024px){.app-layout{grid-template-columns:232px minmax(0,1fr) 270px;gap:14px;padding:16px 12px}.day-grid{gap:5px}.day-card{min-height:86px}.task-row{gap:7px;padding-left:6px;padding-right:6px;grid-template-columns:55px minmax(0,1fr) 24px}.routine-heading{padding:17px 13px}.task-list{margin:0 12px 8px}.right-sidebar .card{padding:15px}}
+@media(max-width:1023px){
+ body{background:#F8FAFC}
+ .app-layout{display:block;padding:0 0 calc(94px + env(safe-area-inset-bottom));max-width:700px;margin:0 auto}
+ .sidebar,.desktop-page-header{display:none!important}
+ .main-column{padding:0 14px}
+ .mobile-header{display:block;background:white;border-bottom:1px solid var(--line);margin:0 -14px;padding:17px 16px 13px}
+ .mobile-head-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+ .mobile-head-row .brand{font-size:18px;gap:7px}
+ .mobile-head-actions{display:flex;gap:8px;align-items:center}
+ .mobile-head-actions button{width:32px;height:32px;display:grid;place-items:center;color:#64748B;background:transparent;border:0;padding:3px;border-radius:9px}
+ .mobile-head-actions button:hover{background:#F1F5F9}
+ .mobile-sub-row{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-top:9px}
+ .mobile-week-select{appearance:none;max-width:58%;min-width:0;background:#F1F5F9;border:0;border-radius:8px;color:#334155;padding:8px 26px 8px 10px;font-size:11px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+ .select-wrap{position:relative;display:flex;max-width:59%;min-width:0}
+ .select-wrap:after{content:'⌄';position:absolute;right:9px;top:4px;pointer-events:none;font-size:19px;color:#64748B}
+ .select-wrap .mobile-week-select{max-width:100%;width:100%}
+ .mobile-day-info{display:flex;align-items:center;gap:7px;white-space:nowrap}
+ .mobile-day-info strong{font-size:16px;letter-spacing:-.4px}
+ .mobile-progress{display:block;background:white;margin:0 -14px 14px;border-bottom:1px solid var(--line);padding:12px 16px 15px}
+ .mobile-progress-line{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:10px;justify-content:space-between}
+ .mobile-progress-line b{font-weight:760}.mobile-progress-line .value{color:var(--primary-deep);font-weight:800}
+ .progress-track{height:7px;border-radius:100px;background:#E2E8F0;overflow:hidden}
+ .progress-fill{height:100%;width:0;background:var(--primary);border-radius:100px;transition:width .2s}
+ .date-strip{gap:0;margin:0 -14px 14px;padding:0 14px}
+ .date-strip .calendar-nav{display:none}
+ .day-grid{display:flex;overflow-x:auto;scrollbar-width:none;gap:9px;padding:0 1px 6px;scroll-snap-type:x proximity}
+ .day-grid::-webkit-scrollbar{display:none}
+ .day-card{min-width:75px;flex:0 0 75px;min-height:87px;scroll-snap-align:start;padding:8px 0;gap:3px}
+ .day-card .day-prefix{font-size:11px}.day-card .day-number{font-size:23px}.day-card .day-mark{font-size:10px}
+ .mobile-summary{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:11px;margin-bottom:14px}
+ .mobile-summary .card{padding:13px;min-width:0}
+ .mobile-summary .widget-title{font-size:12px;gap:3px;white-space:nowrap}
+ .mobile-summary .ring{width:94px;height:94px}.mobile-summary .ring:before{inset:9px}
+ .mobile-summary .ring-number{font-size:17px;letter-spacing:-.4px}.mobile-summary .ring-goal{font-size:10px}
+ .mobile-summary .fasting-graphic{margin-top:9px;gap:6px}
+ .mobile-summary .fasting-note{font-size:10px}
+ .mobile-summary .widget-link{font-size:10px;margin-top:3px;padding:4px}
+ .mobile-water .widget-title{white-space:normal}
+ .mobile-water .metric-number{font-size:19px;font-weight:830;margin:15px 0 12px;letter-spacing:-.5px;white-space:nowrap}
+ .mobile-water .metric-number span{font-size:11px;color:var(--muted);font-weight:550;letter-spacing:0}
+ .mobile-water .water-widget{display:block}
+ .mobile-water .water-drops{gap:0;justify-content:space-between;margin-top:7px;display:flex;flex-wrap:nowrap}
+ .mobile-water .drop-btn{padding:0}.mobile-water .drop-btn .i{width:14px;height:20px}
+ .mobile-water .water-add{width:23px;height:23px;border-radius:7px;flex:none}
+ .mobile-water .water-add .i{width:14px;height:14px}
+ .routine-card{margin-bottom:12px}
+ .routine-heading{padding:17px 15px 12px}.routine-heading h2{font-size:16px}
+ .task-list{margin:0 12px 9px}
+ .task-row{grid-template-columns:50px minmax(0,1fr) 25px;gap:6px;padding:8px 7px;min-height:57px}
+ .task-time{font-size:12px}.task-icon{font-size:16px}.task-center{gap:5px}
+ .task-detail{font-size:12px;gap:5px}.task-detail .task-sub{display:none}
+ .task-checked input{width:19px;height:19px}.task-checked input:checked:after{top:4px;left:3px}
+ .workout-select{font-size:11px;padding:6px}.workout-type{width:112px;flex-basis:112px}.workout-part{width:72px;flex-basis:72px}
+ .water-inline{display:none}
+ .action-footer{padding:12px 14px}.save-state,.reset-text{font-size:11px}.primary-btn{font-size:12px;padding:8px 13px}
+ .right-sidebar{display:none;padding:0 14px}
+ .right-sidebar .card{padding:18px;margin-bottom:13px}
+ .mobile-account-view{display:none;padding:0 14px}
+ .mobile-account-view .account-panel{padding:17px}
+ .mobile-tabs{position:fixed;z-index:1300;bottom:0;left:0;right:0;background:rgba(255,255,255,.98);border-top:1px solid var(--line);display:flex;align-items:stretch;justify-content:space-around;min-height:65px;padding:6px max(7px,env(safe-area-inset-left)) calc(5px + env(safe-area-inset-bottom)) max(7px,env(safe-area-inset-right));box-shadow:0 -4px 20px #0f172a08}
+ .mobile-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:0;background:transparent;color:#94A3B8;font-size:10px;font-weight:650;padding:5px 2px;white-space:nowrap}
+ .mobile-tab .i{width:21px;height:21px}
+ .mobile-tab.active{color:var(--primary-deep)}
+ body[data-mobile-tab="guide"] .mobile-content,body[data-mobile-tab="stats"] .mobile-content,body[data-mobile-tab="account"] .mobile-content{display:none}
+ body[data-mobile-tab="guide"] .right-sidebar,body[data-mobile-tab="stats"] .right-sidebar{display:flex}
+ body[data-mobile-tab="guide"] #weight-card{display:none}
+ body[data-mobile-tab="stats"] #guide-card,body[data-mobile-tab="stats"] #food-card{display:none}
+ body[data-mobile-tab="account"] .mobile-account-view{display:block}
+ body[data-mobile-tab="account"] .mobile-progress,body[data-mobile-tab="guide"] .mobile-progress,body[data-mobile-tab="stats"] .mobile-progress{display:none}
+ body[data-mobile-tab="account"] .mobile-subtitle,body[data-mobile-tab="guide"] .mobile-subtitle,body[data-mobile-tab="stats"] .mobile-subtitle{display:none}
+ .tab-section-title{font-size:18px;font-weight:850;margin:10px 0 15px;display:block}
+ .toast{bottom:calc(78px + env(safe-area-inset-bottom))}
+ }
+@media(max-width:375px){.mobile-water .drop-btn .i{width:11px;height:17px}.mobile-water .water-add{width:19px;height:19px}.mobile-water .water-add .i{width:12px;height:12px}.main-column{padding:0 10px}.mobile-header,.mobile-progress{margin-left:-10px;margin-right:-10px}.mobile-summary{gap:8px}.mobile-summary .card{padding:10px}.date-strip{margin-left:-10px;margin-right:-10px;padding:0 10px}.mobile-summary .ring{width:86px;height:86px}.task-list{margin-left:8px;margin-right:8px}.task-row{grid-template-columns:46px minmax(0,1fr) 23px;gap:4px;padding-left:4px;padding-right:4px}.task-detail{font-size:11px}.task-icon{font-size:15px}.right-sidebar,.mobile-account-view{padding:0 10px}}
+</style>
 </head>
-<body>
-
-<div class="header">
-    <div id="week-title" style="font-size: 16px; font-weight: 900;">연결 중...</div>
-    <div class="progress-container"><div id="prog-bar"></div></div>
-</div>
-
-<div class="week-tabs">
-    <div class="w-tab active" onclick="setWeek(1)">1주차</div>
-    <div class="w-tab" onclick="setWeek(2)">2주차</div>
-    <div class="w-tab" onclick="setWeek(3)">3주차</div>
-    <div class="w-tab" onclick="setWeek(4)">4주차</div>
-</div>
-
-<div id="account-panel" class="account-panel" hidden>
-    <div>
-        <div id="account-state" class="account-state">로그인 확인 중...</div>
-        <div id="account-help" class="account-help"></div>
+<body data-mobile-tab="today">
+<svg width="0" height="0" aria-hidden="true" style="position:absolute"><defs>
+<symbol id="ic-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21c0-5 15-5 15 0"/></symbol>
+<symbol id="ic-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.95l.08.08-1.7 1.7-.08-.08a1.8 1.8 0 0 0-1.94-.37 1.8 1.8 0 0 0-1.11 1.65V20h-2.4v-.12A1.8 1.8 0 0 0 11.5 18.2a1.8 1.8 0 0 0-1.94.38l-.08.08-1.7-1.7.08-.09a1.8 1.8 0 0 0 .37-1.93A1.8 1.8 0 0 0 6.59 13.8H6.5v-2.4h.1a1.8 1.8 0 0 0 1.65-1.1 1.8 1.8 0 0 0-.38-1.95l-.08-.08 1.7-1.7.08.08a1.8 1.8 0 0 0 1.93.37A1.8 1.8 0 0 0 12.6 5.4V5h2.4v.4a1.8 1.8 0 0 0 1.1 1.65 1.8 1.8 0 0 0 1.95-.37l.08-.08 1.7 1.7-.08.08a1.8 1.8 0 0 0-.37 1.94 1.8 1.8 0 0 0 1.63 1.08h.2v2.4H21A1.8 1.8 0 0 0 19.4 15Z" transform="translate(-1 -1)"/></symbol>
+<symbol id="ic-arrow-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+<symbol id="ic-arrow-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+<symbol id="ic-book" viewBox="0 0 24 24"><path d="M12 7c-3-3-6-3-10-2v15c4-1 7-1 10 2 3-3 6-3 10-2V5c-4-1-7-1-10 2Zm0 0v15"/></symbol>
+<symbol id="ic-chart" viewBox="0 0 24 24"><path d="M3 3v18h18M6 16l5-5 4 3 5-7"/></symbol>
+<symbol id="ic-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 10h18m-12 4 2 2 4-4"/></symbol>
+<symbol id="ic-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="ic-droplet" viewBox="0 0 24 24"><path d="M12 2C10 6 5 11 5 15a7 7 0 0 0 14 0c0-4-5-9-7-13Z"/></symbol>
+<symbol id="ic-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+</defs></svg>
+<div class="app-layout" id="app">
+  <aside class="sidebar" aria-label="주차 및 계정 메뉴">
+    <div class="brand"><span class="brand-mark"></span>스위치온 체크</div>
+    <div class="sidebar-account-slot" id="desktop-account-slot">
+      <section id="account-panel" class="account-panel" hidden aria-label="계정 정보">
+        <div class="account-summary">
+          <div class="account-identity">
+            <div class="account-avatar"><svg class="i"><use href="#ic-user"/></svg></div>
+            <div><div id="account-state" class="account-state">로그인 확인 중...</div><div id="account-help" class="account-help"></div></div>
+          </div>
+          <div class="account-actions">
+            <button type="button" id="google-signin-btn" class="account-btn account-btn-primary" onclick="signInWithGoogleAccount()" hidden>Google 계정으로 로그인</button>
+            <button type="button" id="quick-signout-btn" class="account-btn" onclick="signOutGoogleAccount()" hidden>로그아웃</button>
+            <button type="button" id="account-settings-btn" class="account-btn" aria-controls="account-settings" aria-expanded="false" onclick="toggleAccountSettings()">계정 설정</button>
+          </div>
+        </div>
+        <div id="account-settings" class="account-settings" hidden>
+          <div id="account-link-section" hidden>
+            <div class="account-settings-title">기존 기록 연결 (최초 1회)</div>
+            <p class="account-settings-desc">이 기기의 기록을 Google 계정에 연결합니다. 다른 기기에서는 Google 로그인만 이용하세요.</p>
+            <p id="account-record-status" class="account-record-status" role="status"></p>
+            <button type="button" id="google-link-btn" class="account-btn" onclick="linkExistingGoogleAccount()" disabled>기존 기록을 Google 계정에 연결</button>
+          </div>
+          <button type="button" id="google-signout-btn" class="account-btn" onclick="signOutGoogleAccount()" hidden>Google 계정에서 로그아웃</button>
+        </div>
+      </section>
     </div>
-    <div class="account-actions">
-        <button type="button" id="google-link-btn" class="account-btn account-btn-primary" onclick="linkExistingGoogleAccount()" hidden>이 기기 기록 Google에 연결</button>
-        <button type="button" id="google-signin-btn" class="account-btn" onclick="signInWithGoogleAccount()" hidden>Google 계정으로 로그인</button>
-        <button type="button" id="google-signout-btn" class="account-btn" onclick="signOutGoogleAccount()" hidden>로그아웃</button>
+    <div class="side-section-label">4주 프로그램</div>
+    <nav id="week-nav" class="week-nav" aria-label="주차 선택"></nav>
+    <div id="desktop-fasting" class="card fasting-panel"></div>
+  </aside>
+  <main class="main-column" id="main-column">
+    <header class="mobile-header">
+      <div class="mobile-head-row">
+        <div class="brand"><span class="brand-mark"></span>스위치온 체크</div>
+        <div class="mobile-head-actions">
+          <button type="button" aria-label="내 정보" onclick="switchMobileTab('account')"><svg class="i"><use href="#ic-user"/></svg></button>
+          <button type="button" aria-label="계정 설정" onclick="openMobileAccountSettings()"><svg class="i"><use href="#ic-settings"/></svg></button>
+        </div>
+      </div>
+      <div class="mobile-sub-row mobile-subtitle">
+        <div class="select-wrap"><select id="mobile-week-select" class="mobile-week-select" aria-label="주차 선택" onchange="setWeek(Number(this.value))">
+          <option value="1">1주차: 몸의 스위치 켜기</option><option value="2">2주차: 인슐린 저항성 개선</option><option value="3">3주차: 체지방 감량 가속</option><option value="4">4주차: 체지방 감량 가속</option>
+        </select></div>
+        <div class="mobile-day-info"><strong id="mobile-day-title">Day 1</strong><span id="mobile-phase" class="phase-badge">집중기</span></div>
+      </div>
+    </header>
+    <div id="week-title" class="sr-only" role="status">연결 중...</div>
+    <div class="mobile-progress"><div class="mobile-progress-line"><b id="mobile-progress-caption">1주차: Day 1 / 7</b><span id="mobile-progress-value" class="value">14%</span></div><div class="progress-track"><div id="mobile-progress-fill" class="progress-fill"></div></div></div>
+    <div class="mobile-content">
+      <div class="desktop-page-header"><div class="page-title-group"><h1 class="page-title" id="desktop-day-title">Day 1 루틴</h1><span id="desktop-phase" class="phase-badge">집중기</span></div><span class="header-info">주차별 루틴 체크리스트</span></div>
+      <div class="date-strip"><button type="button" class="calendar-nav" id="day-prev" aria-label="이전 날짜" onclick="navigateDay(-1)"><svg class="i"><use href="#ic-arrow-left"/></svg></button><div id="day-grid" class="day-grid" aria-label="1주일 날짜 선택"></div><button type="button" id="day-next" class="calendar-nav" aria-label="다음 날짜" onclick="navigateDay(1)"><svg class="i"><use href="#ic-arrow-right"/></svg></button></div>
+      <div class="mobile-summary"><section class="card mobile-fasting" id="mobile-fasting"></section><section class="card mobile-water" id="mobile-water"></section></div>
+      <section class="card routine-card" id="routine-section">
+        <div class="routine-heading"><h2 id="routine-title">오늘의 루틴 (Day 1)</h2><span id="routine-count" class="routine-count">0/8 완료</span></div>
+        <div id="task-card" class="task-list"></div>
+        <div id="desktop-water" class="water-inline"></div>
+        <div class="action-footer">
+          <div class="action-info"><div class="save-state"><span class="status-dot"></span><span id="save-state">연결 중...</span></div><span style="color:#CBD5E1;font-size:11px">·</span><button type="button" id="reset-btn" class="reset-text" onclick="resetAllData()">전체 초기화</button></div>
+          <button type="button" id="save-btn" class="primary-btn" onclick="saveToCloud(false)">저장</button>
+        </div>
+      </section>
     </div>
+  </main>
+  <aside id="insight-panel" class="right-sidebar" aria-label="주차 가이드와 통계">
+    <div class="sr-only tab-section-title" id="insight-heading"></div>
+    <section class="card info-card" id="guide-card"><h3 id="guide-title">1주차 핵심 가이드</h3><div id="guide-sub" class="guide-sub"></div><ul id="guide-list" class="guide-list"></ul></section>
+    <section class="card info-card" id="food-card"><h3>허용 식품 퀵체크 (신호등)</h3><div id="food-filters" class="food-filters" role="group" aria-label="식품 분류 선택"><button type="button" class="food-filter active" data-food="allowed" onclick="selectFoodFilter('allowed')">🟢 허용</button><button type="button" class="food-filter" data-food="limited" onclick="selectFoodFilter('limited')">🟡 제한</button><button type="button" class="food-filter" data-food="avoid" onclick="selectFoodFilter('avoid')">🔴 금지</button></div><div id="food-display" class="food-display"></div><div class="food-note">시안의 예시 분류입니다. 실제 식단은 본인의 계획을 우선하세요.</div></section>
+    <section class="card info-card" id="weight-card"><h3>체중 &amp; 기록 요약</h3><div id="weight-chart" class="weight-chart" aria-live="polite"></div><form class="weight-form" onsubmit="submitWeight(event)"><label for="weight-input" class="sr-only">선택한 일차의 체중(kg)</label><input id="weight-input" type="number" step="0.1" min="1" max="500" inputmode="decimal" placeholder="체중(kg)" aria-label="선택한 날짜의 체중"><button class="primary-btn" type="submit">기록</button><button class="secondary-btn" type="button" onclick="clearWeight()" aria-label="선택한 날짜의 체중 삭제">삭제</button></form><div id="weight-detail" class="weight-detail">실제 기록을 입력하면 차트에 표시됩니다.</div></section>
+  </aside>
+  <section class="mobile-account-view" id="mobile-account-view"><h2 class="tab-section-title">내 정보</h2><div id="mobile-account-slot"></div></section>
 </div>
-
-<div class="day-grid" id="day-grid"></div>
-<div class="card" id="task-card"></div>
-<div class="action-bar">
-    <button id="reset-btn" class="action-btn reset-btn" onclick="resetAllData()">전체 초기화</button>
-    <button id="save-btn" class="action-btn save-btn" onclick="saveToCloud()">오늘의 성과 저장하기</button>
-</div>
-
-
+<nav class="mobile-tabs" aria-label="모바일 하단 메뉴">
+  <button type="button" class="mobile-tab active" data-tab="today" onclick="switchMobileTab('today')"><svg class="i"><use href="#ic-calendar"/></svg>오늘 체크</button>
+  <button type="button" class="mobile-tab" data-tab="guide" onclick="switchMobileTab('guide')"><svg class="i"><use href="#ic-book"/></svg>가이드</button>
+  <button type="button" class="mobile-tab" data-tab="stats" onclick="switchMobileTab('stats')"><svg class="i"><use href="#ic-chart"/></svg>통계/체중</button>
+  <button type="button" class="mobile-tab" data-tab="account" onclick="switchMobileTab('account')"><svg class="i"><use href="#ic-user"/></svg>내 정보</button>
+</nav>
+<div id="toast" class="toast" role="status" hidden></div>
 <div id="time-modal" class="wheel-modal" role="dialog" aria-modal="true" aria-labelledby="wheel-title" hidden>
-    <div class="wheel-sheet">
-        <div class="wheel-title" id="wheel-title">시간 선택</div>
-        <div class="wheel-wrap">
-            <div class="wheel-pane">
-                <div class="wheel-list" id="hour-wheel" aria-label="시 선택"></div>
-                <div class="wheel-caption">시</div>
-            </div>
-            <span class="wheel-colon">:</span>
-            <div class="wheel-pane">
-                <div class="wheel-list" id="minute-wheel" aria-label="분 선택"></div>
-                <div class="wheel-caption">분</div>
-            </div>
-        </div>
-        <div class="wheel-actions">
-            <button type="button" class="wheel-cancel" onclick="closeTimePicker()">취소</button>
-            <button type="button" class="wheel-confirm" onclick="confirmTimePicker()">시간 적용</button>
-        </div>
-    </div>
+  <div class="wheel-sheet"><div class="wheel-title" id="wheel-title">시간 선택</div><div class="wheel-wrap"><div class="wheel-pane"><div class="wheel-list" id="hour-wheel" aria-label="시 선택"></div><div class="wheel-caption">시</div></div><span class="wheel-colon">:</span><div class="wheel-pane"><div class="wheel-list" id="minute-wheel" aria-label="분 선택"></div><div class="wheel-caption">분</div></div></div><div class="wheel-actions"><button type="button" class="wheel-cancel" onclick="closeTimePicker()">취소</button><button type="button" class="wheel-confirm" onclick="confirmTimePicker()">시간 적용</button></div></div>
 </div>
+<dialog id="fasting-dialog" class="fasting-dialog" aria-labelledby="fasting-dialog-title"><h3 id="fasting-dialog-title">공복 시작 시간 설정</h3><p>실제로 공복을 시작한 날짜와 시간을 입력하세요. 현재 시각을 기준으로 14시간 목표까지의 경과를 계산합니다.</p><form method="dialog" onsubmit="submitFasting(event)"><label for="fasting-start-input">공복 시작 시각</label><input id="fasting-start-input" type="datetime-local" required><div class="dialog-actions"><button class="secondary-btn" type="button" onclick="clearFasting()">기록 삭제</button><button class="secondary-btn" type="button" onclick="document.getElementById('fasting-dialog').close()">취소</button><button class="primary-btn" type="submit">적용</button></div></form></dialog>
 
 <script>
     const firebaseConfig = {
@@ -232,6 +362,8 @@
     let activeDatabaseCallback = null;
     let boundUid = null;
     let accountActionBusy = false;
+    let accountSettingsOpen = false;
+    let accountDataLoaded = false; // Firebase 조회 전에는 계정 연결을 허용하지 않습니다.
     const info = ["", "1주: 몸의 스위치 켜기", "2주: 인슐린 저항성 개선", "3주: 체지방 감량 가속", "4주: 체지방 감량 가속"];
 
     // 원본의 체크박스 키를 유지하여 이미 저장한 기록과 호환됩니다.
@@ -264,13 +396,24 @@
     }
 
     function setOption(path, value) {
+        autoSaveBlocked = false;
         pendingOptions[path] = value;
         refreshSaveButton();
     }
 
-    function refreshSaveButton() {
-        const dirty = Object.keys(pendingChecks).length > 0 || Object.keys(pendingOptions).length > 0;
-        document.getElementById('save-btn').textContent = dirty ? '변경사항 저장하기' : '오늘의 성과 저장하기';
+    function refreshSaveButton(){
+      const dirty=hasUnsavedChanges();
+      if(!accountDataLoaded){ saveStatus('연결 중...','pending'); return; }
+      if(saveInFlight){saveStatus('저장 중...','pending');return;}
+      if(dirty){
+        if(autoSaveBlocked){saveStatus('저장 실패 · 저장 버튼으로 재시도','error');return;}
+        saveStatus('저장 대기 중...','pending');
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer=setTimeout(()=>saveToCloud(true),1000);
+      }else{
+        clearTimeout(autoSaveTimer);
+        saveStatus('자동 저장됨','saved');
+      }
     }
 
     // 수평 스와이프로 날짜 변경. 시간 선택창/드롭다운을 조작할 때는 날짜를 바꾸지 않습니다.
@@ -295,36 +438,88 @@
         else renderGrid();
     }, { passive: true });
 
-    // 익명 계정은 브라우저마다 다른 UID를 사용하므로 PC 기록이 모바일에 자동 표시되지 않습니다.
-    // PC에서 기존 익명 계정에 Google을 연결하면 동일 UID가 유지되고, 모바일에서 해당 Google 계정으로 로그인할 수 있습니다.
+    // 익명 사용자는 브라우저마다 UID가 달라 PC/모바일 기록을 공유하지 않습니다.
+    // 기존 기록이 저장된 기기에서만 최초 1회 Google 계정을 연결합니다.
     function hasUnsavedChanges() {
         return Object.keys(pendingChecks).length > 0 || Object.keys(pendingOptions).length > 0;
     }
 
+    function summarizeAccountRecords(data) {
+        const record = data && typeof data === 'object' ? data : {};
+        const checks = Object.entries(record).filter(([key, val]) => /^d\d+-/.test(key) && val === true).length;
+        let settings = 0;
+        const customizations = record.customizations || {};
+        for (const day of Object.values(customizations)) {
+            if (!day || typeof day !== 'object') continue;
+            if (day.workout && (day.workout.type || day.workout.part)) settings++;
+            for (const value of Object.values(day.times || {})) {
+                if (typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value)) settings++;
+            }
+        }
+        return {checks, settings, hasRecords: checks > 0 || settings > 0};
+    }
+
+    function updateAccountSettings() {
+        const user = auth.currentUser;
+        const settings = document.getElementById('account-settings');
+        const toggle = document.getElementById('account-settings-btn');
+        settings.hidden = !user || !accountSettingsOpen;
+        toggle.setAttribute('aria-expanded', accountSettingsOpen ? 'true' : 'false');
+        toggle.textContent = accountSettingsOpen ? '설정 닫기' : '계정 설정';
+        toggle.disabled = accountActionBusy;
+
+        const anonymous = Boolean(user && user.isAnonymous);
+        const linkSection = document.getElementById('account-link-section');
+        const linkButton = document.getElementById('google-link-btn');
+        const signOutButton = document.getElementById('google-signout-btn');
+        linkSection.hidden = !anonymous;
+        signOutButton.hidden = !user || anonymous;
+        signOutButton.disabled = accountActionBusy;
+        const quickSignout = document.getElementById('quick-signout-btn');
+        quickSignout.hidden = !user || anonymous;
+        quickSignout.disabled = accountActionBusy;
+
+        const status = document.getElementById('account-record-status');
+        const summary = summarizeAccountRecords(cloudData);
+        if (!accountDataLoaded) {
+            status.textContent = 'Firebase에서 이 기기의 기록을 확인하는 중입니다.';
+        } else if (summary.hasRecords) {
+            status.textContent = `확인된 기록: 완료 체크 ${summary.checks}개, 시간·운동 설정 ${summary.settings}개`;
+        } else {
+            status.textContent = '연결할 기존 기록이 없습니다. 위의 Google 로그인 버튼을 사용하세요.';
+        }
+        linkButton.disabled = accountActionBusy || !anonymous || !accountDataLoaded || !summary.hasRecords;
+    }
+
+    function toggleAccountSettings() {
+        if (accountActionBusy || !auth.currentUser) return;
+        accountSettingsOpen = !accountSettingsOpen;
+        updateAccountSettings();
+    }
+
     function setAccountActionBusy(busy) {
         accountActionBusy = busy;
-        ['google-link-btn', 'google-signin-btn', 'google-signout-btn'].forEach(id => {
-            document.getElementById(id).disabled = busy;
-        });
+        document.getElementById('google-signin-btn').disabled = busy;
+        updateAccountSettings();
     }
 
     function showAccountState(user) {
         const panel = document.getElementById('account-panel');
         panel.hidden = !user;
-        const linkButton = document.getElementById('google-link-btn');
-        const signInButton = document.getElementById('google-signin-btn');
-        const signOutButton = document.getElementById('google-signout-btn');
-        linkButton.hidden = !user || !user.isAnonymous;
-        signInButton.hidden = !user || !user.isAnonymous;
-        signOutButton.hidden = !user || user.isAnonymous;
-        if (!user) return;
+        const signin = document.getElementById('google-signin-btn');
+        signin.hidden = !user || !user.isAnonymous;
+        if (!user) {
+            updateAccountSettings();
+            return;
+        }
         if (user.isAnonymous) {
             document.getElementById('account-state').textContent = '현재: 이 브라우저의 임시 계정';
-            document.getElementById('account-help').textContent = '기존 PC 기록이 있다면 먼저 ‘이 기기 기록 Google에 연결’을 선택하세요. 다른 기기는 연결 후 Google 로그인하세요.';
+            document.getElementById('account-help').textContent = '다른 기기에서 같은 기록을 쓰려면 Google 계정으로 로그인하세요. 이 기기의 기존 기록을 처음 연결할 때만 계정 설정을 여세요.';
         } else {
             document.getElementById('account-state').textContent = 'Google 계정 연결됨' + (user.email ? ` · ${user.email}` : '');
-            document.getElementById('account-help').textContent = 'PC와 모바일에서 같은 Google 계정으로 접속하면 동일한 기록이 표시됩니다.';
+            document.getElementById('account-help').textContent = '같은 Google 계정으로 로그인한 기기에서는 동일한 기록을 사용합니다.';
         }
+        updateAccountSettings();
     }
 
     function googleAuthError(error) {
@@ -339,30 +534,71 @@
         } else if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
             message += '팝업이 차단되었습니다. Chrome 또는 Safari 브라우저에서 사이트를 직접 열고 팝업을 허용하세요.';
         } else if (code === 'auth/credential-already-in-use' || code === 'auth/email-already-in-use' || code === 'auth/provider-already-linked') {
-            message += '선택한 Google 계정이 이미 다른 사용자와 연결돼 있습니다. 현재 기록은 자동으로 합쳐지지 않습니다. 데이터를 백업한 뒤 계정을 선택해 주세요.';
+            message += '선택한 Google 계정이 다른 사용자와 이미 연결되어 있어, 이 기기의 기록을 해당 계정에 연결할 수 없습니다. 기존 기록은 삭제되지 않았습니다. 이미 연결한 계정이라면 다른 기기에서 ‘Google 계정으로 로그인’을 사용하세요.';
         } else {
             message += `오류 코드: ${code || '확인 불가'}`;
         }
         alert(message);
     }
 
-    // PC에서 최초 1회: 익명 계정을 Google에 연결하면 UID와 기존 데이터 경로를 그대로 보존합니다.
+    // 기존 익명 계정에 Google 로그인을 연결하므로 기존 UID와 저장 경로를 그대로 유지합니다.
     async function linkExistingGoogleAccount() {
         const user = auth.currentUser;
-        if (!user || !user.isAnonymous || accountActionBusy) return;
-        if (hasUnsavedChanges()) {
-            alert('먼저 하단의 ‘변경사항 저장하기’를 눌러 현재 기록을 저장한 다음 연결하세요.');
+        if (!user || !user.isAnonymous || accountActionBusy || !accountSettingsOpen) return;
+        if (!accountDataLoaded) {
+            alert('Firebase 기록을 확인한 뒤 다시 시도해 주세요.');
             return;
         }
-        const ok = confirm('이 브라우저의 기존 체크 기록을 Google 계정과 연결합니다.\n\n기존 PC에서 사용하던 Google 계정을 선택하세요. 연결되면 모바일에서도 같은 계정으로 기록을 볼 수 있습니다.');
-        if (!ok) return;
+        if (hasUnsavedChanges()) {
+            alert('먼저 아래의 ‘변경사항 저장하기’를 눌러 현재 기록을 저장해 주세요.');
+            return;
+        }
+        const summary = summarizeAccountRecords(cloudData);
+        if (!summary.hasRecords) {
+            alert('현재 기기에는 연결할 기존 기록이 없습니다. ‘Google 계정으로 로그인’을 이용해 주세요.');
+            return;
+        }
+
+        // 연결 전에 기록과 대상 계정을 두 번 확인합니다. 비밀번호는 요구하지 않습니다.
+        const intended = prompt(
+            `이 브라우저에 저장된 기록이 확인되었습니다.\n` +
+            `완료 체크 ${summary.checks}개 · 시간/운동 설정 ${summary.settings}개\n\n` +
+            `이 기록을 연결할 Google 이메일 주소를 입력해 주세요.\n` +
+            `(다른 기기에서도 똑같은 이메일로 로그인해야 합니다.)`
+        );
+        if (intended === null) return;
+        const email = intended.trim().toLowerCase();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            alert('Google 계정 이메일 주소를 올바르게 입력해 주세요. 계정 연결은 진행되지 않았습니다.');
+            return;
+        }
+        if (!confirm(
+            `연결할 Google 계정\n${email}\n\n` +
+            `현재 기록(완료 체크 ${summary.checks}개, 시간·운동 설정 ${summary.settings}개)을` +
+            ` 이 계정에 연결하시겠습니까?\n\n` +
+            `이어서 나타나는 Google 계정 선택 화면에서도 같은 이메일을 선택하세요.\n` +
+            `다른 Google 계정을 선택하면 그 계정에 연결될 수 있습니다.`
+        )) return;
+
+        // Firebase SDK가 선택 화면을 띄웁니다. 이미 다른 UID에 연결된 Google 계정은 링크할 수 없습니다.
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({login_hint: email, prompt: 'select_account'});
+        const originalUid = user.uid;
         setAccountActionBusy(true);
         try {
-            const uidBefore = user.uid;
-            const result = await user.linkWithPopup(new firebase.auth.GoogleAuthProvider());
-            if (result.user.uid !== uidBefore) throw new Error('Google 연결 이후 UID가 변경되었습니다. 데이터를 확인하세요.');
+            const result = await user.linkWithPopup(provider);
+            if (result.user.uid !== originalUid) {
+                alert('계정 연결 이후 사용자 ID가 변경됐습니다. 기록을 삭제하거나 초기화하지 말고 Firebase에서 계정을 확인해 주세요.');
+                return;
+            }
+            accountSettingsOpen = false;
             showAccountState(result.user);
-            alert('Google 계정 연결 완료!\n\n이제 모바일에서 같은 사이트에 접속해 ‘Google 계정으로 로그인’을 누르고 동일한 Google 계정을 선택하세요.');
+            const selected = (result.user.email || '').toLowerCase();
+            if (selected && selected !== email) {
+                alert(`Google 계정 연결은 완료됐습니다.\n\n입력한 계정: ${email}\n실제 연결된 계정: ${result.user.email}\n\n입력한 계정과 다릅니다. 기존 기록은 삭제하지 않았습니다. 연결된 계정을 확인해 주세요.`);
+            } else {
+                alert(`기존 기록을 Google 계정에 연결했습니다.\n\n연결 계정: ${result.user.email || email}\n\n다른 기기에서는 ‘Google 계정으로 로그인’을 누르세요.`);
+            }
         } catch (error) {
             googleAuthError(error);
         } finally {
@@ -370,23 +606,35 @@
         }
     }
 
-    // 모바일 또는 새 PC: 이미 연결된 Google 계정으로 로그인하여 같은 UID의 기록을 불러옵니다.
+    // 새 기기에서 이미 연결된 Google 계정으로 로그인해 같은 UID의 기록을 불러옵니다.
     async function signInWithGoogleAccount() {
         const user = auth.currentUser;
-        if (!user || accountActionBusy) return;
-        if (hasUnsavedChanges()) {
-            alert('저장하지 않은 변경사항이 있습니다. 먼저 하단의 저장 버튼을 눌러 주세요.');
+        if (!user || accountActionBusy || !user.isAnonymous) return;
+        if (!accountDataLoaded) {
+            alert('이 기기의 기록 확인을 마친 후 다시 시도해 주세요.');
             return;
         }
-        // 익명 데이터가 있는 상태에서 바로 로그인하면 기존 기록과 자동 병합되지 않으므로 명확히 경고합니다.
-        if (user.isAnonymous && Object.keys(cloudData).some(key => key !== 'customizations')) {
-            const ok = confirm('이 브라우저에 익명 기록이 있습니다.\n\nGoogle로 로그인하면 기존 Google 계정의 기록이 표시되며, 지금 브라우저의 익명 기록은 자동으로 합쳐지지 않습니다.\n\n기존 기록을 Google에 연결하려면 취소 후 ‘이 기기 기록 Google에 연결’을 선택하세요.\n\n계속 로그인하시겠습니까?');
-            if (!ok) return;
+        if (hasUnsavedChanges()) {
+            alert('저장하지 않은 변경사항이 있습니다. 먼저 아래 저장 버튼을 눌러 주세요.');
+            return;
+        }
+        const summary = summarizeAccountRecords(cloudData);
+        if (summary.hasRecords) {
+            // 잘못 로그인해 기존 익명 UID의 기록을 잃어버리는 일이 없도록 먼저 경고합니다.
+            accountSettingsOpen = true;
+            updateAccountSettings();
+            alert(`이 브라우저에 기존 기록이 있습니다.\n` +
+                  `완료 체크 ${summary.checks}개 · 시간/운동 설정 ${summary.settings}개\n\n` +
+                  `Google 로그인으로 전환하면 이 기록이 자동으로 합쳐지지 않으며, 익명 기록에 다시 접근하기 어려울 수 있습니다.\n\n` +
+                  `먼저 ‘계정 설정 → 기존 기록을 Google 계정에 연결’을 이용하거나, 별도 브라우저에서 로그인하세요.`);
+            return;
         }
         setAccountActionBusy(true);
         try {
-            await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-            // onAuthStateChanged에서 UID 변경을 감지하여 데이터 구독을 새 계정으로 전환합니다.
+            const provider = new firebase.auth.GoogleAuthProvider();
+            provider.setCustomParameters({prompt:'select_account'});
+            await auth.signInWithPopup(provider);
+            // onAuthStateChanged에서 새 UID의 데이터만 구독합니다.
         } catch (error) {
             googleAuthError(error);
         } finally {
@@ -424,10 +672,14 @@
         });
 
         auth.onAuthStateChanged(user => {
-            showAccountState(user);
             const weekTitle = document.getElementById('week-title');
-            // 연결만 한 경우에는 UID가 같으므로 기존 화면과 저장 중인 기록을 변경하지 않습니다.
-            if (user && user.uid === boundUid && activeDatabaseRef) return;
+            // 기존 익명 계정에 Google을 연결할 때는 UID가 같으므로 기록을 다시 불러올 필요가 없습니다.
+            if (user && user.uid === boundUid && activeDatabaseRef) {
+                showAccountState(user);
+                return;
+            }
+            accountDataLoaded = false;
+            accountSettingsOpen = false;
             if (activeDatabaseRef && activeDatabaseCallback) {
                 activeDatabaseRef.off('value', activeDatabaseCallback);
             }
@@ -437,6 +689,7 @@
             cloudData = {};
             pendingChecks = {};
             pendingOptions = {};
+            showAccountState(user);
             document.getElementById('day-grid').innerHTML = '';
             document.getElementById('task-card').innerHTML = '';
 
@@ -448,6 +701,8 @@
                     // 이전 계정 구독의 뒤늦은 이벤트가 현재 계정 데이터를 덮어쓰지 않도록 방지합니다.
                     if (boundUid !== user.uid) return;
                     cloudData = snapshot.val() || {};
+                    accountDataLoaded = true;
+                    updateAccountSettings();
                     if (document.getElementById('day-grid').innerHTML === '') setWeek(1);
                     else renderGrid();
                 };
@@ -467,15 +722,13 @@
         });
     }
 
-    function setWeek(week, resetDay = true) {
-        if (week < 1 || week > 4) return;
-        curW = week;
-        if (resetDay) curD = (week - 1) * 7 + 1;
-        document.querySelectorAll('.w-tab').forEach((el, i) => el.classList.toggle('active', i + 1 === week));
-        const title = document.getElementById('week-title');
-        title.innerText = info[week];
-        title.style.color = `var(--w${week})`;
-        renderGrid();
+    function setWeek(week,resetDay=true){
+      if(!Number.isInteger(week)||week<1||week>4)return;
+      curW=week;
+      if(resetDay)curD=(week-1)*7+1;
+      const title=document.getElementById('week-title');
+      title.textContent=info[week];
+      renderGrid();
     }
 
     function makeTasks(day) {
@@ -500,7 +753,7 @@
             if (hasStrength && hasCardio) workout = '하체 근력 + 유산소';
             else if (hasStrength) workout = '하체 근력운동만';
             else if (hasCardio) workout = '유산소만';
-            else workout = '휴식일 (가벼운 산책)';
+            else workout = '휴식일';
         }
         tasks.push({key:'exercise', t:'운동', l:'운동', n:workout, type:'work', icon:'🏃'});
         return tasks;
@@ -514,17 +767,27 @@
         return makeTasks(day).every(task => getChecked(legacyId(day, task)));
     }
 
-    function renderGrid() {
-        const grid = document.getElementById('day-grid');
-        grid.innerHTML = '';
-        for (let day = (curW - 1) * 7 + 1; day <= curW * 7; day++) {
-            const btn = document.createElement('div');
-            btn.className = `d-btn ${day === curD ? 'active' : ''} ${checkDayDone(day) ? 'done' : ''}`;
-            btn.innerHTML = `<div style="font-size:10px; color:#888;">Day</div><div style="font-size:14px;">${day}</div><div class="dot"></div>`;
-            btn.onclick = () => { curD = day; renderGrid(); };
-            grid.appendChild(btn);
-        }
-        renderTasks();
+    function renderGrid(){
+      const grid=document.getElementById('day-grid');
+      grid.innerHTML='';
+      for(let day=(curW-1)*7+1;day<=curW*7;day++){
+        const done=checkDayDone(day);
+        const selected=day===curD;
+        const btn=document.createElement('button');
+        btn.type='button';
+        btn.className=`day-card d-btn ${selected?'active':''} ${done?'done':''}`;
+        btn.setAttribute('aria-pressed',String(selected));
+        btn.setAttribute('aria-label',`Day ${day}${done?', 완료':''}${selected?', 선택 중':''}`);
+        btn.innerHTML=`<span class="day-prefix">Day</span><strong class="day-number">${day}</strong><span class="day-mark">${done?'완료 ✓':selected?'선택 중':'　'}</span>`;
+        btn.onclick=()=>{curD=day;renderGrid();};
+        grid.appendChild(btn);
+      }
+      renderWeekChrome();
+      renderTasks();
+      renderGuides();
+      renderWeight();
+      renderWaterWidgets();
+      renderFastingWidgets();
     }
 
     function defaultWorkoutChoice(day) {
@@ -666,27 +929,24 @@
         return getDayTimeSchedule(day)[task.key]?.time || '00:00';
     }
 
-    function renderTasks() {
-        const card = document.getElementById('task-card');
-        const phase = curD <= 3 ? '집중기' : (curD <= 14 ? '도입기' : '가속기');
-        const tasks = makeTasks(curD);
-        let html = `<div class="card-title"><span style="font-weight:900;">Day ${curD} 루틴</span><span class="phase-label" style="background:var(--w${curW}); color:white;">${phase}</span></div>`;
-
-        tasks.forEach(task => {
-            const id = legacyId(curD, task);
-            const checked = getChecked(id) ? 'checked' : '';
-            const displayTime = getDisplayTime(curD, task);
-            html += `<div class="task ${task.key === 'exercise' ? 'task-work' : ''}">
-                <button type="button" class="time-tag" title="시간 변경" aria-label="${htmlEscape(task.l)} 시간 변경" onclick="openTimePicker('${task.key}')">${displayTime}</button>
-                <input type="checkbox" id="${id}" aria-label="${htmlEscape(task.l)} 완료" onchange="onCheckChanged(this)" ${checked}>
-                <span class="badge badge-${task.type}">${task.icon} ${task.l}</span>
-                ${task.key === 'exercise' ? renderWorkoutControls(task) : `<label for="${id}" class="task-txt">${htmlEscape(task.n)}</label>`}
-            </div>`;
-        });
-
-        card.innerHTML = html;
-        updateProg();
-        refreshSaveButton();
+    function renderTasks(){
+      const tasks=makeTasks(curD);
+      const host=document.getElementById('task-card');
+      const schedule=getDayTimeSchedule(curD); // 모든 항목에 한 번 계산합니다.
+      host.innerHTML=tasks.map(task=>{
+        const id=legacyId(curD,task);
+        const checked=getChecked(id);
+        const time=schedule[task.key]?.time||'00:00';
+        const workout=task.key==='exercise';
+        return `<div class="task-row ${checked?'checked':''} ${workout?'task-work':''}">
+          <button type="button" class="task-time" aria-label="${htmlEscape(task.l)} 시간 변경" title="시간 변경" onclick="openTimePicker('${task.key}')">${htmlEscape(time)}</button>
+          <div class="task-center"><span class="task-icon" aria-hidden="true">${task.icon}</span>
+            <div class="task-detail">${workout?`<span>운동</span>${renderWorkoutControls(task)}`:`<label for="${id}">${htmlEscape(task.n)}</label><span class="task-sub">${htmlEscape(task.l)}</span>`}</div></div>
+          <label class="task-checked"><input type="checkbox" id="${id}" aria-label="${htmlEscape(task.l)} 완료" onchange="onCheckChanged(this)" ${checked?'checked':''}><span class="sr-only">완료 체크</span></label>
+        </div>`;
+      }).join('');
+      updateProg();
+      refreshSaveButton();
     }
 
     function changeWorkoutType(type) {
@@ -705,42 +965,33 @@
         renderTasks();
     }
 
-    function onCheckChanged(input) {
-        const day = curD;
-        const task = makeTasks(day).find(item => legacyId(day, item) === input.id);
-        pendingChecks[input.id] = input.checked;
-
-        if (task && isAutoTimeTarget(task)) {
-            if (input.checked) {
-                if (!hasManualTime(day, task)) {
-                    // 미리 표시된 자동 예정 시간 대신 실제 체크한 현재 시각을 저장합니다.
-                    setOption(timePath(day, task.key), currentTimeInTenMinutes());
-                    setOption(timeModePath(day, task.key), 'auto');
-                }
-                setOption(checkOrderPath(day, task.key), nextCheckOrder(day));
-            } else {
-                // 자동으로 기록한 시각은 해제하고, 직접 입력한 시간은 보존합니다.
-                if (getOption(timeModePath(day, task.key)) === 'auto') {
-                    setOption(timePath(day, task.key), null);
-                    setOption(timeModePath(day, task.key), null);
-                }
-                setOption(checkOrderPath(day, task.key), null);
-            }
+    function onCheckChanged(input){
+      const day=curD;
+      const task=makeTasks(day).find(item=>legacyId(day,item)===input.id);
+      pendingChecks[input.id]=input.checked;
+      autoSaveBlocked=false;
+      if(task&&isAutoTimeTarget(task)){
+        if(input.checked){
+          if(!hasManualTime(day,task)){
+            setOption(timePath(day,task.key),currentTimeInTenMinutes());
+            setOption(timeModePath(day,task.key),'auto');
+          }
+          setOption(checkOrderPath(day,task.key),nextCheckOrder(day));
+        }else{
+          if(getOption(timeModePath(day,task.key))==='auto'){
+            setOption(timePath(day,task.key),null);
+            setOption(timeModePath(day,task.key),null);
+          }
+          setOption(checkOrderPath(day,task.key),null);
         }
-
-        renderTasks();
-        document.querySelectorAll('.d-btn').forEach((btn, index) => {
-            btn.classList.toggle('done', checkDayDone((curW - 1) * 7 + index + 1));
-        });
+      }
+      renderGrid();
     }
 
-    function updateProg() {
-        const inputs = document.querySelectorAll('#task-card input[type="checkbox"]');
-        const checked = Array.from(inputs).filter(input => input.checked).length;
-        const per = Math.round((checked / inputs.length) * 100) || 0;
-        const bar = document.getElementById('prog-bar');
-        bar.style.width = per + '%';
-        bar.style.backgroundColor = `var(--w${curW})`;
+    function updateProg(){
+      const tasks=makeTasks(curD);
+      const count=tasks.filter(task=>getChecked(legacyId(curD,task))).length;
+      document.getElementById('routine-count').textContent=`${count}/${tasks.length} 완료`;
     }
 
     // 시 휠은 1시간 단위, 분 휠은 10분 단위로 선택합니다.
@@ -826,58 +1077,301 @@
         renderTasks();
     }
 
-    function setActionButtonsDisabled(disabled) {
-        document.getElementById('save-btn').disabled = disabled;
-        document.getElementById('reset-btn').disabled = disabled;
+    function setActionButtonsDisabled(disabled){
+      document.getElementById('save-btn').disabled=disabled;
+      document.getElementById('reset-btn').disabled=disabled;
     }
 
-    function saveToCloud() {
-        if (!auth.currentUser || accountActionBusy) {
-            alert('로그인 상태를 확인한 후 다시 저장해 주세요.');
+    async function saveToCloud(silent=false){
+        clearTimeout(autoSaveTimer);
+        if(!auth.currentUser||accountActionBusy||!accountDataLoaded){
+            if(!silent)toast('로그인과 데이터 연결 상태를 확인해 주세요.');
             return;
         }
-        const checkPatch = {...pendingChecks};
-        const optionPatch = {...pendingOptions};
-        const patch = {...checkPatch, ...optionPatch};
-        if (Object.keys(patch).length === 0) {
-            alert('저장할 변경사항이 없습니다.');
-            return;
-        }
+        if(saveInFlight){if(!silent)toast('저장 중입니다.');return;}
+        if(!silent)autoSaveBlocked=false;
+        const checkPatch={...pendingChecks};
+        const optionPatch={...pendingOptions};
+        const patch={...checkPatch,...optionPatch};
+        if(Object.keys(patch).length===0){if(!silent)toast('모든 변경사항이 저장되어 있습니다.');return;}
+        const uid=auth.currentUser.uid;
+        saveInFlight=true;
+        let succeeded=false;
         setActionButtonsDisabled(true);
-        // 여러 기기에서 사용해도 수정하지 않은 기존 기록을 덮어쓰지 않습니다.
-        db.ref(`users/${auth.currentUser.uid}/tracker_data`).update(patch).then(() => {
-            for (const [key, value] of Object.entries(checkPatch)) {
-                if (pendingChecks[key] === value) delete pendingChecks[key];
-            }
-            for (const [key, value] of Object.entries(optionPatch)) {
-                if (pendingOptions[key] === value) delete pendingOptions[key];
-            }
-            alert('저장 완료!');
-            renderGrid();
-        }).catch(error => {
-            console.error(error);
-            alert('저장에 실패했습니다. 인터넷 연결과 Firebase 규칙을 확인해 주세요.');
-        }).finally(() => setActionButtonsDisabled(false));
+        saveStatus('저장 중...','pending');
+        try{
+            await db.ref(`users/${uid}/tracker_data`).update(patch);
+            if(auth.currentUser?.uid!==uid)return;
+            Object.entries(checkPatch).forEach(([key,value])=>{if(pendingChecks[key]===value)delete pendingChecks[key];});
+            Object.entries(optionPatch).forEach(([key,value])=>{if(pendingOptions[key]===value)delete pendingOptions[key];});
+            succeeded=true;
+            autoSaveBlocked=false;
+            if(!silent)toast('기록이 저장되었습니다.');
+        }catch(error){
+            console.error('Firebase 저장 오류:',error);
+            autoSaveBlocked=true;
+            saveStatus('저장 실패 · 저장 버튼으로 재시도','error');
+            if(!silent)alert('저장에 실패했습니다. Firebase 보안 규칙과 인터넷 연결을 확인해 주세요.');
+        }finally{
+            saveInFlight=false;
+            setActionButtonsDisabled(false);
+            if(succeeded){
+                if(hasUnsavedChanges())refreshSaveButton();
+                else saveStatus('자동 저장됨','saved');
+            }else saveStatus('저장 실패 · 저장 버튼으로 재시도','error');
+        }
     }
 
-    function resetAllData() {
-        if (!auth.currentUser || accountActionBusy) return;
-        const ok = confirm('1일차부터 28일차까지의 모든 체크 기록, 변경한 시간과 운동 설정을 삭제하고 초기화하시겠습니까?\n\n삭제한 기록은 복구할 수 없습니다.');
-        if (!ok) return;
-        setActionButtonsDisabled(true);
-        db.ref(`users/${auth.currentUser.uid}/tracker_data`).remove().then(() => {
-            pendingChecks = {};
-            pendingOptions = {};
-            cloudData = {};
-            curW = 1;
-            curD = 1;
-            setWeek(1);
-            alert('전체 기록을 초기화했습니다.');
-        }).catch(error => {
-            console.error(error);
-            alert('초기화에 실패했습니다. 인터넷 연결과 Firebase 규칙을 확인해 주세요.');
-        }).finally(() => setActionButtonsDisabled(false));
+    async function resetAllData(){
+      if(!auth.currentUser||accountActionBusy||saveInFlight)return;
+      if(!confirm('현재 계정에 저장된 1~28일의 체크 기록, 시간, 운동, 체중, 수분 및 공복 시작 기록을 모두 삭제합니다.\n\n다른 사람의 기록은 삭제되지 않습니다. 계속하시겠습니까?'))return;
+      if(!confirm('삭제한 기록은 복구할 수 없습니다. 정말 전체 초기화하시겠습니까?'))return;
+      clearTimeout(autoSaveTimer);
+      setActionButtonsDisabled(true);
+      try{
+        await db.ref(`users/${auth.currentUser.uid}/tracker_data`).remove();
+        pendingChecks={};pendingOptions={};cloudData={};
+        curW=1;curD=1;setWeek(1);
+        toast('전체 기록을 초기화했습니다.');
+      }catch(error){
+        console.error(error);
+        alert('초기화에 실패했습니다. 연결 상태를 확인해 주세요.');
+      }finally{setActionButtonsDisabled(false);}
     }
+// 반응형 UI 계층: 기존 Firebase 인증·저장 키와 루틴/시간 계산 함수는 유지합니다.
+let autoSaveTimer = null;
+let saveInFlight = false;
+let autoSaveBlocked = false;
+let toastTimer = null;
+let currentFoodFilter = 'allowed';
+const fastingGoalHours = 14;
+const weekNames = ['','몸의 스위치 켜기','인슐린 저항성 개선','체지방 감량 가속','체지방 감량 가속'];
+const weekGuides = {
+  1: ['시안 참고: 하루 4회 단백질 쉐이크','당류·정제 탄수화물 섭취에 유의','수분 섭취 목표 확인','공복 목표와 현재 상태 확인'],
+  2: ['루틴에서 단식 시작·종료 표시를 확인하세요','식사·쉐이크의 완료 시간을 기록하세요','운동 종류와 부위를 선택해 기록하세요','수분과 체중의 변화도 함께 확인하세요'],
+  3: ['날짜별 단식 시작·종료 항목을 확인하세요','실제 식사 시간은 필요에 따라 조정하세요','운동 완료 여부를 기록하세요','체중과 수분 기록을 꾸준히 확인하세요'],
+  4: ['유지할 수 있는 일정을 선택하세요','날짜별 완료 항목을 확인하세요','체중 변화는 여러 날의 기록으로 살펴보세요','기록을 백업하고 계속 관리하세요']
+};
+const foodExamples = {
+  allowed: {label:'🟢 허용 예시',color:'#059669',items:'두부, 플레인 요거트, 녹색 채소, 해조류 등'},
+  limited: {label:'🟡 제한 예시',color:'#D97706',items:'과일, 당분이 포함된 음료, 정제 곡물 등'},
+  avoid: {label:'🔴 금지 예시',color:'#DC2626',items:'가공육, 설탕이 많은 간식, 단 음료 등'}
+};
+function toast(message){
+  const el = document.getElementById('toast');
+  el.textContent = message;
+  el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{el.hidden=true;},2600);
+}
+function saveStatus(label,mode='saved'){
+  const labelEl=document.getElementById('save-state');
+  if(labelEl)labelEl.textContent=label;
+  const dot=document.querySelector('.status-dot');
+  if(dot)dot.style.backgroundColor=mode==='error'?'#EF4444':mode==='pending'?'#F59E0B':'#10B981';
+}
+
+
+function navigateDay(delta){
+  const next=curD+delta;
+  if(next<1||next>28)return;
+  curD=next;
+  curW=Math.ceil(curD/7);
+  renderGrid();
+}
+function renderWeekChrome(){
+  const position=(curD-1)%7+1;
+  const percentage=Math.floor(position/7*100);
+  const phase=curD<=3?'집중기':curD<=14?'도입기':'가속기';
+  document.getElementById('desktop-day-title').textContent=`Day ${curD} 루틴`;
+  document.getElementById('mobile-day-title').textContent=`Day ${curD}`;
+  document.getElementById('desktop-phase').textContent=phase;
+  document.getElementById('mobile-phase').textContent=phase;
+  document.getElementById('routine-title').textContent=`오늘의 루틴 (Day ${curD})`;
+  document.getElementById('mobile-progress-caption').textContent=`${curW}주차: Day ${position} / 7`;
+  document.getElementById('mobile-progress-value').textContent=`${percentage}%`;
+  document.getElementById('mobile-progress-fill').style.width=`${percentage}%`;
+  document.getElementById('mobile-week-select').value=String(curW);
+  document.getElementById('day-prev').disabled=curD===1;
+  document.getElementById('day-next').disabled=curD===28;
+  const tabs=document.getElementById('week-nav');
+  tabs.innerHTML=[1,2,3,4].map(w=>{
+    const selected=w===curW;
+    const within=selected?position:(w<curW?7:0);
+    const pct=Math.floor(within/7*100);
+    return `<button type="button" class="week-nav-btn ${selected?'active':''}" aria-current="${selected?'step':'false'}" onclick="setWeek(${w})"><span class="week-label">${w}주차: ${weekNames[w]}</span>${selected?`<span class="week-meter"><span class="week-meter-inner" style="display:block;width:${pct}%"></span></span><span class="week-progress-caption">Day ${within} / 7　·　${pct}% 진행</span>`:`<span class="week-sub">${w<curW?'지난 주차':'주차 선택'}</span>`}</button>`;
+  }).join('');
+}
+
+
+
+
+
+
+
+function switchMobileTab(tab){
+  if(!['today','guide','stats','account'].includes(tab))return;
+  document.body.dataset.mobileTab=tab;
+  document.querySelectorAll('.mobile-tab').forEach(button=>{
+    const active=button.dataset.tab===tab;
+    button.classList.toggle('active',active);
+    button.setAttribute('aria-current',active?'page':'false');
+  });
+  window.scrollTo({top:0,behavior:'instant'});
+}
+function openMobileAccountSettings(){
+  switchMobileTab('account');
+  if(!accountSettingsOpen&&auth.currentUser)toggleAccountSettings();
+}
+function relocateAccountPanel(){
+  const mobile=window.matchMedia('(max-width:1023px)').matches;
+  const target=document.getElementById(mobile?'mobile-account-slot':'desktop-account-slot');
+  const panel=document.getElementById('account-panel');
+  if(panel.parentElement!==target)target.appendChild(panel);
+}
+function renderGuides(){
+  document.getElementById('guide-title').textContent=`${curW}주차 핵심 가이드`;
+  document.getElementById('guide-sub').textContent=weekNames[curW];
+  document.getElementById('guide-list').innerHTML=weekGuides[curW].map(line=>`<li>${htmlEscape(line)}</li>`).join('');
+  selectFoodFilter(currentFoodFilter);
+}
+function selectFoodFilter(filter){
+  if(!foodExamples[filter])return;
+  currentFoodFilter=filter;
+  document.querySelectorAll('.food-filter').forEach(btn=>{
+    btn.classList.toggle('active',btn.dataset.food===filter);
+    btn.setAttribute('aria-pressed',String(btn.dataset.food===filter));
+  });
+  const data=foodExamples[filter];
+  document.getElementById('food-display').innerHTML=`<div class="food-status" style="color:${data.color}">${data.label}</div><div>${htmlEscape(data.items)}</div>`;
+}
+const waterPath=day=>`customizations/d${day}/water_ml`;
+function getWater(day=curD){
+  const raw=Number(getOption(waterPath(day)));
+  return Number.isFinite(raw)?Math.max(0,Math.min(2000,Math.round(raw/250)*250)):0;
+}
+function setWaterDrops(count){
+  const old=getWater()/250;
+  const actual=count===old?count-1:count;
+  setOption(waterPath(curD),Math.max(0,Math.min(8,actual))*250);
+  renderWaterWidgets();
+}
+function addWater(){setOption(waterPath(curD),Math.min(2000,getWater()+250));renderWaterWidgets();}
+function waterDropsHTML(){
+  const amount=getWater();
+  return Array.from({length:8},(_,i)=>`<button type="button" class="drop-btn ${i<amount/250?'filled':''}" aria-label="수분 ${250*(i+1)}ml 선택" aria-pressed="${i<amount/250}" onclick="setWaterDrops(${i+1})"><svg class="i"><use href="#ic-droplet"/></svg></button>`).join('');
+}
+function renderWaterWidgets(){
+  const amount=getWater();
+  document.getElementById('desktop-water').innerHTML=`<div class="water-widget"><div class="widget-title" style="color:#3B82F6"><svg class="i"><use href="#ic-droplet"/></svg> 수분 섭취</div><div class="water-drops">${waterDropsHTML()}</div><div class="water-number num">${amount.toLocaleString('ko-KR')}ml <span>/ 2,000ml</span></div><button type="button" class="water-add" aria-label="수분 250ml 추가" onclick="addWater()"><svg class="i"><use href="#ic-plus"/></svg></button></div>`;
+  document.getElementById('mobile-water').innerHTML=`<div class="widget-title">💧 수분 섭취</div><div class="metric-number num">${amount.toLocaleString('ko-KR')}<span> / 2,000 ml</span></div><div class="water-widget"><div class="water-drops">${waterDropsHTML()}<button type="button" class="water-add" aria-label="수분 250ml 추가" onclick="addWater()"><svg class="i"><use href="#ic-plus"/></svg></button></div></div>`;
+}
+const fastingTimePath='customizations/fasting/startAt';
+function getFastingStart(){
+  const raw=getOption(fastingTimePath);
+  if(typeof raw!=='string'||!raw)return null;
+  const date=new Date(raw);
+  return Number.isNaN(date.valueOf())?null:date;
+}
+function formatDuration(ms){
+  const total=Math.floor(Math.max(0,ms)/60000);
+  return `${String(Math.floor(total/60)).padStart(2,'0')}:${String(total%60).padStart(2,'0')}`;
+}
+function fastingHTML(compact=false){
+  const start=getFastingStart();
+  const elapsed=start?Math.max(0,Date.now()-start.valueOf()):0;
+  const pct=Math.min(100,elapsed/(fastingGoalHours*3600000)*100);
+  const reached=Boolean(start&&elapsed>=fastingGoalHours*3600000);
+  const note=!start?'시작 시간을 입력하세요':reached?'✓ 공복 목표 시간 달성':'공복 시간 기록 중';
+  return `<div class="widget-title">🔥 14시간 공복 유지</div><div class="fasting-graphic"><div class="ring" style="--pct:${pct}%"><div class="ring-inner"><strong class="ring-number num">${start?formatDuration(elapsed):'--:--'}</strong><span class="ring-goal num">/ 14:00</span></div></div><div class="fasting-note">${note}</div></div><button type="button" class="widget-link" onclick="openFastingDialog()">${start?'시작 시간 변경':'시작 시간 설정'}</button>`;
+}
+function renderFastingWidgets(){
+  document.getElementById('desktop-fasting').innerHTML=fastingHTML(false);
+  document.getElementById('mobile-fasting').innerHTML=fastingHTML(true);
+}
+function openFastingDialog(){
+  const start=getFastingStart()||new Date();
+  const local=new Date(start.getTime()-start.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  const input=document.getElementById('fasting-start-input');
+  input.value=local;
+  input.max=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);
+  document.getElementById('fasting-dialog').showModal();
+}
+function submitFasting(event){
+  event.preventDefault();
+  const value=document.getElementById('fasting-start-input').value;
+  const date=new Date(value);
+  if(!Number.isFinite(date.getTime())||date.getTime()>Date.now()){
+    alert('현재 시각 이전의 공복 시작 시간을 선택해 주세요.');return;
+  }
+  setOption(fastingTimePath,date.toISOString());
+  document.getElementById('fasting-dialog').close();
+  renderFastingWidgets();
+}
+function clearFasting(){
+  if(!confirm('공복 시작 시간을 삭제하시겠습니까?'))return;
+  setOption(fastingTimePath,null);
+  document.getElementById('fasting-dialog').close();
+  renderFastingWidgets();
+}
+const weightPath=day=>`customizations/d${day}/weight`;
+function getWeight(day){
+  const raw=getOption(weightPath(day));
+  if(raw===undefined||raw===null||raw==='')return null;
+  const n=Number(raw);
+  return Number.isFinite(n)&&n>0?n:null;
+}
+function submitWeight(event){
+  event.preventDefault();
+  const input=document.getElementById('weight-input');
+  const num=Number(input.value);
+  if(!Number.isFinite(num)||num<1||num>500){toast('체중을 1~500kg 범위로 입력해 주세요.');return;}
+  setOption(weightPath(curD),Math.round(num*10)/10);
+  renderWeight();
+  toast(`Day ${curD} 체중을 기록했습니다.`);
+}
+function clearWeight(){
+  if(getWeight(curD)===null)return;
+  if(!confirm(`Day ${curD}에 기록한 체중을 삭제하시겠습니까?`))return;
+  setOption(weightPath(curD),null);
+  renderWeight();
+}
+function renderWeight(){
+  const first=(curW-1)*7+1;
+  const data=Array.from({length:7},(_,i)=>({day:first+i,value:getWeight(first+i)}));
+  const known=data.filter(row=>row.value!==null);
+  const input=document.getElementById('weight-input');
+  if(document.activeElement!==input)input.value=getWeight(curD)??'';
+  const chart=document.getElementById('weight-chart');
+  if(!known.length){
+    chart.innerHTML='<div class="chart-empty">아직 입력된 체중이 없습니다.<br>아래에 기록하면 그래프가 표시됩니다.</div>';
+    document.getElementById('weight-detail').textContent=`Day ${curD} 체중 기록을 입력할 수 있습니다.`;
+    return;
+  }
+  const values=known.map(row=>row.value);
+  const min=Math.min(...values)-.8;
+  const max=Math.max(...values)+.8;
+  const xy=row=>({x:14+(row.day-first)*42.5,y:82-((row.value-min)/(max-min))*67});
+  const points=known.map(xy);
+  const line=points.map(point=>`${point.x},${point.y}`).join(' ');
+  const xLabels=Array.from({length:7},(_,i)=>`<text x="${14+i*42.5}" y="110" text-anchor="middle" font-size="10" fill="#94A3B8">${i+1}</text>`).join('');
+  const dots=known.map((row,i)=>`<circle cx="${points[i].x}" cy="${points[i].y}" r="4.5" fill="#10B981" stroke="#FFFFFF" stroke-width="2"><title>Day ${row.day}: ${row.value}kg</title></circle>`).join('');
+  chart.innerHTML=`<svg viewBox="0 0 284 118" role="img" aria-label="${curW}주차 체중 기록 ${known.length}건"><line x1="8" y1="24" x2="276" y2="24" stroke="#E2E8F0" stroke-dasharray="3 4"/><line x1="8" y1="54" x2="276" y2="54" stroke="#E2E8F0" stroke-dasharray="3 4"/><line x1="8" y1="83" x2="276" y2="83" stroke="#E2E8F0"/>${points.length>1?`<polyline fill="none" stroke="#10B981" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" points="${line}"/>`:''}${dots}${xLabels}</svg>`;
+  const current=getWeight(curD);
+  document.getElementById('weight-detail').textContent=`${curW}주차 기록 ${known.length}건 · Day ${curD}: ${current===null?'미입력':`${current.toFixed(1)}kg`}`;
+}
+function initResponsiveDashboard(){
+  relocateAccountPanel();
+  window.addEventListener('resize',relocateAccountPanel,{passive:true});
+  setInterval(renderFastingWidgets,30000);
+  selectFoodFilter('allowed');
+  renderFastingWidgets();
+  renderWaterWidgets();
+  renderGuides();
+  renderWeight();
+}
+window.addEventListener('load',initResponsiveDashboard);
+
     window.onload = init;
 </script>
 </body>
