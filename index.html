@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#F8FAFC">
 <title>스위치온 체크</title>
-<script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=130031"></script>
+<script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=139609"></script>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -45,7 +45,6 @@ num,.num,.task-time,.ring-number,.metric-number,.day-number,.week-progress-capti
 .account-settings-title{font-weight:800;font-size:13px;margin-bottom:7px}
 .account-settings-desc,.account-record-status{color:var(--muted);font-size:12px;line-height:1.6;margin:6px 0}
 #google-link-btn{width:100%;margin-top:7px}
-#google-signout-btn{margin-top:9px;width:100%}
 .side-section-label{font-size:11px;font-weight:800;letter-spacing:.09em;color:#94A3B8;margin:26px 12px 10px}
 .week-nav{display:flex;flex-direction:column;gap:8px}
 .week-nav-btn{border:1px solid transparent;background:#F1F5F9;border-radius:12px;text-align:left;padding:13px;min-height:54px;color:#334155;transition:background .15s,border-color .15s}
@@ -161,16 +160,20 @@ num,.num,.task-time,.ring-number,.metric-number,.day-number,.week-progress-capti
 .wheel-list{height:220px;overflow-y:auto;overscroll-behavior:contain;scroll-snap-type:y mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:88px 0}
 .wheel-list::-webkit-scrollbar{display:none}
 .wheel-item{width:100%;height:44px;background:transparent;border:0;color:#94A3B8;font-weight:620;font-size:17px;display:flex;justify-content:center;align-items:center;scroll-snap-align:center;scroll-snap-stop:always}
+.wheel-item{position:relative;z-index:1}
 .wheel-item.selected{color:var(--primary-deep);font-size:23px;font-weight:850}
 .wheel-colon{font-weight:850;font-size:22px}.wheel-caption{text-align:center;font-size:11px;color:var(--muted);margin-top:5px}
 .wheel-actions{display:flex;gap:8px;margin-top:17px}.wheel-actions button{border:0;border-radius:10px;min-height:44px;font-size:13px;font-weight:800}
 .wheel-cancel{flex:1;background:#F1F5F9;color:#475569}.wheel-confirm{flex:2;background:var(--primary);color:white}
 body.modal-open{overflow:hidden}
-.fasting-dialog{border:1px solid var(--line);border-radius:16px;background:white;color:var(--ink);padding:22px;width:min(380px,calc(100vw - 32px));box-shadow:0 18px 65px #0f172a2b}
-.fasting-dialog::backdrop{background:rgba(15,23,42,.48)}
-.fasting-dialog h3{margin:0 0 8px;font-size:18px}.fasting-dialog p{font-size:12px;color:var(--muted);line-height:1.6}
-.fasting-dialog label{display:block;font-size:12px;font-weight:800;margin:16px 0 7px}
-.fasting-dialog input{width:100%;padding:11px;border:1px solid var(--line);border-radius:9px}
+.wheel-sheet{max-height:calc(100dvh - 12px);overflow-y:auto}
+.fasting-date-row{margin:-3px 0 14px}
+.fasting-date-row>label{display:block;font-size:12px;font-weight:800;margin:0 0 9px;color:#334155}
+.fasting-date-controls{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.fasting-date-controls input[type=date]{flex:1 1 150px;min-width:0;border:1px solid var(--line);border-radius:10px;padding:10px 9px;background:#fff;color:var(--ink);font-variant-numeric:tabular-nums;min-height:42px;font-size:14px}
+.fasting-date-shortcut{min-height:42px;padding:8px 10px;border:1px solid #D1FAE5;border-radius:10px;background:#F0FDF4;color:#047857;font-size:12px;font-weight:750}
+.fasting-date-row p{font-size:11px;color:var(--muted);margin:10px 0 0;line-height:1.5}
+.fasting-delete-btn{display:block;margin:11px auto 0;padding:9px 12px;font-size:12px;font-weight:750;color:#B91C1C;background:transparent;border:0;text-decoration:underline;text-underline-offset:3px}
 .dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:17px}.secondary-btn{background:#F1F5F9;color:#334155;border:0;border-radius:9px;padding:9px 14px;font-size:12px;font-weight:750}
 @media(max-width:1230px) and (min-width:1024px){.app-layout{grid-template-columns:232px minmax(0,1fr) 270px;gap:14px;padding:16px 12px}.day-grid{gap:5px}.day-card{min-height:86px}.task-row{gap:7px;padding-left:6px;padding-right:6px;grid-template-columns:55px minmax(0,1fr) 24px}.routine-heading{padding:17px 13px}.task-list{margin:0 12px 8px}.right-sidebar .card{padding:15px}}
 @media(max-width:1023px){
@@ -289,7 +292,6 @@ body.modal-open{overflow:hidden}
             <p id="account-record-status" class="account-record-status" role="status"></p>
             <button type="button" id="google-link-btn" class="account-btn" onclick="linkExistingGoogleAccount()" disabled>기존 기록을 Google 계정에 연결</button>
           </div>
-          <button type="button" id="google-signout-btn" class="account-btn" onclick="signOutGoogleAccount()" hidden>Google 계정에서 로그아웃</button>
         </div>
       </section>
     </div>
@@ -346,9 +348,22 @@ body.modal-open{overflow:hidden}
 </nav>
 <div id="toast" class="toast" role="status" hidden></div>
 <div id="time-modal" class="wheel-modal" role="dialog" aria-modal="true" aria-labelledby="wheel-title" hidden>
-  <div class="wheel-sheet"><div class="wheel-title" id="wheel-title">시간 선택</div><div class="wheel-wrap"><div class="wheel-pane"><div class="wheel-list" id="hour-wheel" aria-label="시 선택"></div><div class="wheel-caption">시</div></div><span class="wheel-colon">:</span><div class="wheel-pane"><div class="wheel-list" id="minute-wheel" aria-label="분 선택"></div><div class="wheel-caption">분</div></div></div><div class="wheel-actions"><button type="button" class="wheel-cancel" onclick="closeTimePicker()">취소</button><button type="button" class="wheel-confirm" onclick="confirmTimePicker()">시간 적용</button></div></div>
+  <div class="wheel-sheet">
+    <div class="wheel-title" id="wheel-title">시간 선택</div>
+    <div id="fasting-date-row" class="fasting-date-row" hidden>
+      <label for="fasting-date-input">공복 시작 날짜</label>
+      <div class="fasting-date-controls">
+        <input id="fasting-date-input" type="date" aria-label="공복 시작 날짜">
+        <button type="button" class="fasting-date-shortcut" onclick="setFastingDateOffset(0)">오늘</button>
+        <button type="button" class="fasting-date-shortcut" onclick="setFastingDateOffset(-1)">어제</button>
+      </div>
+      <p>아래 휠에서 시작 시간을 선택하세요. 분은 10분 단위입니다.</p>
+    </div>
+    <div class="wheel-wrap"><div class="wheel-pane"><div class="wheel-list" id="hour-wheel" aria-label="시 선택"></div><div class="wheel-caption">시</div></div><span class="wheel-colon">:</span><div class="wheel-pane"><div class="wheel-list" id="minute-wheel" aria-label="분 선택"></div><div class="wheel-caption">분</div></div></div>
+    <div class="wheel-actions"><button type="button" class="wheel-cancel" onclick="closeTimePicker()">취소</button><button type="button" id="wheel-confirm-btn" class="wheel-confirm" onclick="confirmTimePicker()">시간 적용</button></div>
+    <button type="button" id="fasting-delete-btn" class="fasting-delete-btn" onclick="clearFasting()" hidden>공복 기록 삭제</button>
+  </div>
 </div>
-<dialog id="fasting-dialog" class="fasting-dialog" aria-labelledby="fasting-dialog-title"><h3 id="fasting-dialog-title">공복 시작 시간 설정</h3><p>실제로 공복을 시작한 날짜와 시간을 입력하세요. 현재 시각을 기준으로 14시간 목표까지의 경과를 계산합니다.</p><form method="dialog" onsubmit="submitFasting(event)"><label for="fasting-start-input">공복 시작 시각</label><input id="fasting-start-input" type="datetime-local" required><div class="dialog-actions"><button class="secondary-btn" type="button" onclick="clearFasting()">기록 삭제</button><button class="secondary-btn" type="button" onclick="document.getElementById('fasting-dialog').close()">취소</button><button class="primary-btn" type="submit">적용</button></div></form></dialog>
 
 <script>
     const firebaseConfig = {
@@ -481,10 +496,13 @@ body.modal-open{overflow:hidden}
         const anonymous = Boolean(user && user.isAnonymous);
         const linkSection = document.getElementById('account-link-section');
         const linkButton = document.getElementById('google-link-btn');
-        const signOutButton = document.getElementById('google-signout-btn');
+        // Google 연결 후에는 기존 기록 연결 설정이 필요하지 않습니다.
+        // 로그아웃은 계정 카드의 버튼 하나에서만 제공합니다.
         linkSection.hidden = !anonymous;
-        signOutButton.hidden = !user || anonymous;
-        signOutButton.disabled = accountActionBusy;
+        toggle.hidden = !anonymous;
+        if (!anonymous) accountSettingsOpen = false;
+        settings.hidden = !anonymous || !accountSettingsOpen;
+        toggle.setAttribute('aria-expanded', accountSettingsOpen ? 'true' : 'false');
         const quickSignout = document.getElementById('quick-signout-btn');
         quickSignout.hidden = !user || anonymous;
         quickSignout.disabled = accountActionBusy;
@@ -1061,11 +1079,17 @@ body.modal-open{overflow:hidden}
         if (!task) return;
         currentTimeKey = taskKey;
         currentTimeDay = curD;
-        const time = getDisplayTime(curD, task);
         document.getElementById('wheel-title').textContent = `${task.l} 시간 선택`;
+        document.getElementById('fasting-date-row').hidden = true;
+        document.getElementById('fasting-delete-btn').hidden = true;
+        document.getElementById('wheel-confirm-btn').textContent = '시간 적용';
+        showTimeWheel(getDisplayTime(curD, task));
+    }
+
+    function showTimeWheel(time) {
         document.getElementById('time-modal').hidden = false;
         document.body.classList.add('modal-open');
-        // 표시 직후 해당 값이 휠 중앙에 오도록 이동합니다.
+        // 루틴과 공복에서 같은 휠 조작·10분 단위 선택을 사용합니다.
         document.getElementById('hour-wheel').scrollTop = Number(time.slice(0, 2)) * wheelItemHeight;
         const minuteIndex = Math.max(0, Math.min(5, Math.round(Number(time.slice(3, 5)) / 10)));
         document.getElementById('minute-wheel').scrollTop = minuteIndex * wheelItemHeight;
@@ -1076,6 +1100,8 @@ body.modal-open{overflow:hidden}
     function closeTimePicker() {
         document.getElementById('time-modal').hidden = true;
         document.body.classList.remove('modal-open');
+        document.getElementById('fasting-date-row').hidden = true;
+        document.getElementById('fasting-delete-btn').hidden = true;
         currentTimeKey = null;
         currentTimeDay = null;
     }
@@ -1084,6 +1110,22 @@ body.modal-open{overflow:hidden}
         if (currentTimeKey === null) return;
         const hh = String(getWheelNumber('hour-wheel')).padStart(2, '0');
         const mm = String(getWheelNumber('minute-wheel')).padStart(2, '0');
+        if (currentTimeKey === '__fasting__') {
+            const selectedDate = document.getElementById('fasting-date-input').value;
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
+                alert('공복을 시작한 날짜를 선택해 주세요.');
+                return;
+            }
+            const start = new Date(`${selectedDate}T${hh}:${mm}:00`);
+            if (!Number.isFinite(start.getTime()) || start.getTime() > Date.now()) {
+                alert('현재 시각보다 늦은 공복 시작 시간은 선택할 수 없습니다.');
+                return;
+            }
+            setOption(fastingTimePath, start.toISOString());
+            closeTimePicker();
+            renderFastingWidgets();
+            return;
+        }
         setOption(timePath(currentTimeDay, currentTimeKey), `${hh}:${mm}`);
         // 같은 시각을 직접 선택해도 다음 체크 때 자동으로 덮어쓰지 않습니다.
         setOption(timeModePath(currentTimeDay, currentTimeKey), 'manual');
@@ -1303,29 +1345,40 @@ function renderFastingWidgets(){
   document.getElementById('desktop-fasting').innerHTML=fastingHTML(false);
   document.getElementById('mobile-fasting').innerHTML=fastingHTML(true);
 }
-function openFastingDialog(){
-  const start=getFastingStart()||new Date();
-  const local=new Date(start.getTime()-start.getTimezoneOffset()*60000).toISOString().slice(0,16);
-  const input=document.getElementById('fasting-start-input');
-  input.value=local;
-  input.max=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);
-  document.getElementById('fasting-dialog').showModal();
+function localCalendarDate(date){
+  const year=date.getFullYear();
+  const month=String(date.getMonth()+1).padStart(2,'0');
+  const day=String(date.getDate()).padStart(2,'0');
+  return `${year}-${month}-${day}`;
 }
-function submitFasting(event){
-  event.preventDefault();
-  const value=document.getElementById('fasting-start-input').value;
-  const date=new Date(value);
-  if(!Number.isFinite(date.getTime())||date.getTime()>Date.now()){
-    alert('현재 시각 이전의 공복 시작 시간을 선택해 주세요.');return;
-  }
-  setOption(fastingTimePath,date.toISOString());
-  document.getElementById('fasting-dialog').close();
-  renderFastingWidgets();
+function setFastingDateOffset(offsetDays){
+  const date=new Date();
+  date.setDate(date.getDate()+offsetDays);
+  document.getElementById('fasting-date-input').value=localCalendarDate(date);
+}
+function openFastingDialog(){
+  const saved=getFastingStart();
+  const start=saved||new Date();
+  // 과거 저장 시각이 10분 단위가 아니면 가장 가까운 값으로 표시합니다.
+  // 예: 23:56 -> 다음 날 00:00 (시/날짜 올림 처리).
+  const rounded=new Date(start);
+  rounded.setMinutes((saved?Math.round(start.getMinutes()/10):Math.floor(start.getMinutes()/10))*10,0,0);
+  const dateInput=document.getElementById('fasting-date-input');
+  dateInput.max=localCalendarDate(new Date());
+  dateInput.value=localCalendarDate(rounded);
+  const time=`${String(rounded.getHours()).padStart(2,'0')}:${String(rounded.getMinutes()).padStart(2,'0')}`;
+  currentTimeKey='__fasting__';
+  currentTimeDay=null;
+  document.getElementById('wheel-title').textContent='공복 시작 시간 설정';
+  document.getElementById('fasting-date-row').hidden=false;
+  document.getElementById('fasting-delete-btn').hidden=!saved;
+  document.getElementById('wheel-confirm-btn').textContent='공복 시작 저장';
+  showTimeWheel(time);
 }
 function clearFasting(){
-  if(!confirm('공복 시작 시간을 삭제하시겠습니까?'))return;
+  if(!confirm('공복 시작 기록을 삭제하시겠습니까?'))return;
   setOption(fastingTimePath,null);
-  document.getElementById('fasting-dialog').close();
+  closeTimePicker();
   renderFastingWidgets();
 }
 const weightPath=day=>`customizations/d${day}/weight`;
