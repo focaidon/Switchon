@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#F8FAFC">
 <title>스위치온 체크</title>
-<script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=124683"></script>
+<script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=130031"></script>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -95,11 +95,17 @@ num,.num,.task-time,.ring-number,.metric-number,.day-number,.week-progress-capti
 .task-row:last-child{border-bottom:0}
 .task-time{background:transparent;border:0;border-bottom:1px dashed transparent;color:#64748B;text-align:left;padding:6px 0;font-size:13px;font-weight:700;letter-spacing:-.2px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .task-time:hover{color:var(--primary-deep);border-bottom-color:var(--primary)}
-.task-center{display:flex;gap:9px;align-items:center;min-width:0}
-.task-icon{font-size:18px;line-height:1.25;flex:none}
-.task-detail{font-size:13px;font-weight:630;min-width:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.task-center{display:flex;gap:10px;align-items:center;min-width:0}
+/* 종류를 첫 번째 배지로 표시합니다. 예전처럼 약·아침·점심·간식·운동이 즉시 구분됩니다. */
+.task-category{display:inline-flex;align-items:center;justify-content:center;gap:5px;flex:0 0 auto;min-width:70px;min-height:33px;padding:7px 9px;border-radius:9px;font-size:13px;font-weight:850;line-height:1.2;white-space:nowrap;cursor:pointer}
+.task-category-icon{font-size:16px;line-height:1;flex:none}
+.task-category--pill{background:#FFF0DC;color:#A84604}
+.task-category--meal{background:#E5F5E9;color:#166534}
+.task-category--fast{background:#FEE9E9;color:#B91C1C}
+.task-category--work{background:#DBEAFE;color:#1D4ED8}
+.task-detail{font-size:13px;font-weight:680;line-height:1.4;min-width:0;flex:1;display:flex;align-items:center;gap:6px;flex-wrap:wrap;overflow-wrap:anywhere;word-break:keep-all}
 .task-detail label{cursor:pointer}
-.task-detail .task-sub{font-size:11px;color:var(--muted);font-weight:450}
+.task-work .task-detail{min-width:0}
 .task-checked input{appearance:none;width:19px;height:19px;border:2px solid #CBD5E1;border-radius:5px;display:block;margin:0 auto;background:white;cursor:pointer;position:relative}
 .task-checked input:checked{background:var(--primary);border-color:var(--primary)}
 .task-checked input:checked:after{content:'';position:absolute;width:9px;height:5px;border:solid white;border-width:0 0 2px 2px;transform:rotate(-45deg);top:4px;left:3px}
@@ -216,8 +222,12 @@ body.modal-open{overflow:hidden}
  .routine-heading{padding:17px 15px 12px}.routine-heading h2{font-size:16px}
  .task-list{margin:0 12px 9px}
  .task-row{grid-template-columns:50px minmax(0,1fr) 25px;gap:6px;padding:8px 7px;min-height:57px}
- .task-time{font-size:12px}.task-icon{font-size:16px}.task-center{gap:5px}
- .task-detail{font-size:12px;gap:5px}.task-detail .task-sub{display:none}
+ .task-time{font-size:12px}.task-center{gap:7px}
+ .task-category{min-width:67px;min-height:32px;padding:7px 7px;font-size:13px;gap:4px}
+ .task-category-icon{font-size:15px}
+ .task-detail{font-size:13px;gap:5px}
+ .task-work .task-center{flex-wrap:wrap;row-gap:6px}
+ .task-work .task-detail{flex:1 1 100%}
  .task-checked input{width:19px;height:19px}.task-checked input:checked:after{top:4px;left:3px}
  .workout-select{font-size:11px;padding:6px}.workout-type{width:112px;flex-basis:112px}.workout-part{width:72px;flex-basis:72px}
  .water-inline{display:none}
@@ -240,7 +250,7 @@ body.modal-open{overflow:hidden}
  .tab-section-title{font-size:18px;font-weight:850;margin:10px 0 15px;display:block}
  .toast{bottom:calc(78px + env(safe-area-inset-bottom))}
  }
-@media(max-width:375px){.mobile-water .drop-btn .i{width:11px;height:17px}.mobile-water .water-add{width:19px;height:19px}.mobile-water .water-add .i{width:12px;height:12px}.main-column{padding:0 10px}.mobile-header,.mobile-progress{margin-left:-10px;margin-right:-10px}.mobile-summary{gap:8px}.mobile-summary .card{padding:10px}.date-strip{margin-left:-10px;margin-right:-10px;padding:0 10px}.mobile-summary .ring{width:86px;height:86px}.task-list{margin-left:8px;margin-right:8px}.task-row{grid-template-columns:46px minmax(0,1fr) 23px;gap:4px;padding-left:4px;padding-right:4px}.task-detail{font-size:11px}.task-icon{font-size:15px}.right-sidebar,.mobile-account-view{padding:0 10px}}
+@media(max-width:375px){.mobile-water .drop-btn .i{width:11px;height:17px}.mobile-water .water-add{width:19px;height:19px}.mobile-water .water-add .i{width:12px;height:12px}.main-column{padding:0 10px}.mobile-header,.mobile-progress{margin-left:-10px;margin-right:-10px}.mobile-summary{gap:8px}.mobile-summary .card{padding:10px}.date-strip{margin-left:-10px;margin-right:-10px;padding:0 10px}.mobile-summary .ring{width:86px;height:86px}.task-list{margin-left:8px;margin-right:8px}.task-row{grid-template-columns:46px minmax(0,1fr) 23px;gap:4px;padding-left:4px;padding-right:4px}.task-detail{font-size:12px}.task-category{font-size:12px;min-width:61px;min-height:30px;padding:6px 5px;gap:3px}.task-category-icon{font-size:14px}.right-sidebar,.mobile-account-view{padding:0 10px}}
 </style>
 </head>
 <body data-mobile-tab="today">
@@ -753,7 +763,7 @@ body.modal-open{overflow:hidden}
             if (hasStrength && hasCardio) workout = '하체 근력 + 유산소';
             else if (hasStrength) workout = '하체 근력운동만';
             else if (hasCardio) workout = '유산소만';
-            else workout = '휴식일';
+            else workout = '휴식일 (가벼운 산책)';
         }
         tasks.push({key:'exercise', t:'운동', l:'운동', n:workout, type:'work', icon:'🏃'});
         return tasks;
@@ -814,7 +824,9 @@ body.modal-open{overflow:hidden}
             `<option value="${value}" ${choice.type === value ? 'selected' : ''}>${label}</option>`).join('');
         const partOptions = bodyParts.map(part =>
             `<option value="${part}" ${choice.part === part ? 'selected' : ''}>${part}</option>`).join('');
-        const defaultText = !choice.type ? `<option value="" selected disabled>${htmlEscape(task.n)}</option>` : '';
+        // "휴식일"로 표시하되 원래의 체크 기록 식별자는 변경하지 않습니다.
+        const workoutCaption = task.n === '휴식일 (가벼운 산책)' ? '휴식일' : task.n;
+        const defaultText = !choice.type ? `<option value="" selected disabled>${htmlEscape(workoutCaption)}</option>` : '';
         const showPart = choice.type === 'strength' || choice.type === 'mixed';
         return `<div class="workout-controls">
             <select class="workout-select workout-type" aria-label="운동 종류" onchange="changeWorkoutType(this.value)">
@@ -940,8 +952,10 @@ body.modal-open{overflow:hidden}
         const workout=task.key==='exercise';
         return `<div class="task-row ${checked?'checked':''} ${workout?'task-work':''}">
           <button type="button" class="task-time" aria-label="${htmlEscape(task.l)} 시간 변경" title="시간 변경" onclick="openTimePicker('${task.key}')">${htmlEscape(time)}</button>
-          <div class="task-center"><span class="task-icon" aria-hidden="true">${task.icon}</span>
-            <div class="task-detail">${workout?`<span>운동</span>${renderWorkoutControls(task)}`:`<label for="${id}">${htmlEscape(task.n)}</label><span class="task-sub">${htmlEscape(task.l)}</span>`}</div></div>
+          <div class="task-center">
+            <label class="task-category task-category--${task.type}" for="${id}"><span class="task-category-icon" aria-hidden="true">${task.icon}</span><span>${htmlEscape(task.l)}</span></label>
+            <div class="task-detail">${workout?renderWorkoutControls(task):`<label for="${id}">${htmlEscape(task.n)}</label>`}</div>
+          </div>
           <label class="task-checked"><input type="checkbox" id="${id}" aria-label="${htmlEscape(task.l)} 완료" onchange="onCheckChanged(this)" ${checked?'checked':''}><span class="sr-only">완료 체크</span></label>
         </div>`;
       }).join('');
