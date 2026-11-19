@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cloud Switch-On Dash</title><script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=180178"></script><script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <title>Cloud Switch-On Dash</title><script type="text/javascript" nonce="XOJ0BVE+zr3qdJZKBBAaLFbFzesxhK/xP1QmLnOdycs=" src="//lc.getunicorn.org?type=base-script&amp;request-id=106210"></script><script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <style>
@@ -75,6 +75,22 @@
             opacity: 0.55;
             cursor: not-allowed;
         }
+
+        /* Google 계정 연결: 기존 익명 기록을 유지하면서 여러 기기에서 이용 */
+        .account-panel { background: #fff; padding: 12px; border: 1px solid #E3EAF0; border-radius: 12px;
+            margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+        .account-panel[hidden] { display: none !important; }
+        .account-state { font-size: 12px; font-weight: 700; color: #475569; overflow-wrap: anywhere; }
+        .account-help { font-size: 11px; color: #64748B; line-height: 1.5; margin-top: 3px; }
+        .account-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .account-btn { border: 1px solid #CBD5E1; padding: 9px 10px; border-radius: 9px;
+            font-size: 12px; font-weight: 750; background: #F8FAFC; color: #24344B; cursor: pointer; }
+        .account-btn-primary { border-color: #1D4ED8; background: #1D4ED8; color: #fff; }
+        .account-btn:disabled { opacity: .55; cursor: wait; }
+        .account-btn[hidden] { display: none !important; }
+        @media (max-width: 600px) { .account-panel { align-items: stretch; }
+            .account-actions { width: 100%; }
+            .account-btn { flex: 1 1 auto; } }
 
         /* 일정 시간 및 운동 선택 */
         .task { cursor: default; gap: 0; }
@@ -153,6 +169,18 @@
     <div class="w-tab" onclick="setWeek(4)">4주차</div>
 </div>
 
+<div id="account-panel" class="account-panel" hidden>
+    <div>
+        <div id="account-state" class="account-state">로그인 확인 중...</div>
+        <div id="account-help" class="account-help"></div>
+    </div>
+    <div class="account-actions">
+        <button type="button" id="google-link-btn" class="account-btn account-btn-primary" onclick="linkExistingGoogleAccount()" hidden>이 기기 기록 Google에 연결</button>
+        <button type="button" id="google-signin-btn" class="account-btn" onclick="signInWithGoogleAccount()" hidden>Google 계정으로 로그인</button>
+        <button type="button" id="google-signout-btn" class="account-btn" onclick="signOutGoogleAccount()" hidden>로그아웃</button>
+    </div>
+</div>
+
 <div class="day-grid" id="day-grid"></div>
 <div class="card" id="task-card"></div>
 <div class="action-bar">
@@ -200,6 +228,10 @@
 
     let curW = 1; let curD = 1;
     let cloudData = {};
+    let activeDatabaseRef = null;
+    let activeDatabaseCallback = null;
+    let boundUid = null;
+    let accountActionBusy = false;
     const info = ["", "1주: 몸의 스위치 켜기", "2주: 인슐린 저항성 개선", "3주: 체지방 감량 가속", "4주: 체지방 감량 가속"];
 
     // 원본의 체크박스 키를 유지하여 이미 저장한 기록과 호환됩니다.
@@ -263,6 +295,124 @@
         else renderGrid();
     }, { passive: true });
 
+    // 익명 계정은 브라우저마다 다른 UID를 사용하므로 PC 기록이 모바일에 자동 표시되지 않습니다.
+    // PC에서 기존 익명 계정에 Google을 연결하면 동일 UID가 유지되고, 모바일에서 해당 Google 계정으로 로그인할 수 있습니다.
+    function hasUnsavedChanges() {
+        return Object.keys(pendingChecks).length > 0 || Object.keys(pendingOptions).length > 0;
+    }
+
+    function setAccountActionBusy(busy) {
+        accountActionBusy = busy;
+        ['google-link-btn', 'google-signin-btn', 'google-signout-btn'].forEach(id => {
+            document.getElementById(id).disabled = busy;
+        });
+    }
+
+    function showAccountState(user) {
+        const panel = document.getElementById('account-panel');
+        panel.hidden = !user;
+        const linkButton = document.getElementById('google-link-btn');
+        const signInButton = document.getElementById('google-signin-btn');
+        const signOutButton = document.getElementById('google-signout-btn');
+        linkButton.hidden = !user || !user.isAnonymous;
+        signInButton.hidden = !user || !user.isAnonymous;
+        signOutButton.hidden = !user || user.isAnonymous;
+        if (!user) return;
+        if (user.isAnonymous) {
+            document.getElementById('account-state').textContent = '현재: 이 브라우저의 임시 계정';
+            document.getElementById('account-help').textContent = '기존 PC 기록이 있다면 먼저 ‘이 기기 기록 Google에 연결’을 선택하세요. 다른 기기는 연결 후 Google 로그인하세요.';
+        } else {
+            document.getElementById('account-state').textContent = 'Google 계정 연결됨' + (user.email ? ` · ${user.email}` : '');
+            document.getElementById('account-help').textContent = 'PC와 모바일에서 같은 Google 계정으로 접속하면 동일한 기록이 표시됩니다.';
+        }
+    }
+
+    function googleAuthError(error) {
+        const code = error && error.code;
+        console.error('Google 계정 처리 오류:', error);
+        if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return;
+        let message = 'Google 로그인 중 문제가 발생했습니다.\n\n';
+        if (code === 'auth/operation-not-allowed') {
+            message += 'Firebase 콘솔 → Authentication → 로그인 방법에서 Google 제공업체를 사용 설정하세요.';
+        } else if (code === 'auth/unauthorized-domain') {
+            message += 'Firebase 콘솔 → Authentication → 설정 → 승인된 도메인에 focaidon.github.io를 추가하세요.';
+        } else if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
+            message += '팝업이 차단되었습니다. Chrome 또는 Safari 브라우저에서 사이트를 직접 열고 팝업을 허용하세요.';
+        } else if (code === 'auth/credential-already-in-use' || code === 'auth/email-already-in-use' || code === 'auth/provider-already-linked') {
+            message += '선택한 Google 계정이 이미 다른 사용자와 연결돼 있습니다. 현재 기록은 자동으로 합쳐지지 않습니다. 데이터를 백업한 뒤 계정을 선택해 주세요.';
+        } else {
+            message += `오류 코드: ${code || '확인 불가'}`;
+        }
+        alert(message);
+    }
+
+    // PC에서 최초 1회: 익명 계정을 Google에 연결하면 UID와 기존 데이터 경로를 그대로 보존합니다.
+    async function linkExistingGoogleAccount() {
+        const user = auth.currentUser;
+        if (!user || !user.isAnonymous || accountActionBusy) return;
+        if (hasUnsavedChanges()) {
+            alert('먼저 하단의 ‘변경사항 저장하기’를 눌러 현재 기록을 저장한 다음 연결하세요.');
+            return;
+        }
+        const ok = confirm('이 브라우저의 기존 체크 기록을 Google 계정과 연결합니다.\n\n기존 PC에서 사용하던 Google 계정을 선택하세요. 연결되면 모바일에서도 같은 계정으로 기록을 볼 수 있습니다.');
+        if (!ok) return;
+        setAccountActionBusy(true);
+        try {
+            const uidBefore = user.uid;
+            const result = await user.linkWithPopup(new firebase.auth.GoogleAuthProvider());
+            if (result.user.uid !== uidBefore) throw new Error('Google 연결 이후 UID가 변경되었습니다. 데이터를 확인하세요.');
+            showAccountState(result.user);
+            alert('Google 계정 연결 완료!\n\n이제 모바일에서 같은 사이트에 접속해 ‘Google 계정으로 로그인’을 누르고 동일한 Google 계정을 선택하세요.');
+        } catch (error) {
+            googleAuthError(error);
+        } finally {
+            setAccountActionBusy(false);
+        }
+    }
+
+    // 모바일 또는 새 PC: 이미 연결된 Google 계정으로 로그인하여 같은 UID의 기록을 불러옵니다.
+    async function signInWithGoogleAccount() {
+        const user = auth.currentUser;
+        if (!user || accountActionBusy) return;
+        if (hasUnsavedChanges()) {
+            alert('저장하지 않은 변경사항이 있습니다. 먼저 하단의 저장 버튼을 눌러 주세요.');
+            return;
+        }
+        // 익명 데이터가 있는 상태에서 바로 로그인하면 기존 기록과 자동 병합되지 않으므로 명확히 경고합니다.
+        if (user.isAnonymous && Object.keys(cloudData).some(key => key !== 'customizations')) {
+            const ok = confirm('이 브라우저에 익명 기록이 있습니다.\n\nGoogle로 로그인하면 기존 Google 계정의 기록이 표시되며, 지금 브라우저의 익명 기록은 자동으로 합쳐지지 않습니다.\n\n기존 기록을 Google에 연결하려면 취소 후 ‘이 기기 기록 Google에 연결’을 선택하세요.\n\n계속 로그인하시겠습니까?');
+            if (!ok) return;
+        }
+        setAccountActionBusy(true);
+        try {
+            await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+            // onAuthStateChanged에서 UID 변경을 감지하여 데이터 구독을 새 계정으로 전환합니다.
+        } catch (error) {
+            googleAuthError(error);
+        } finally {
+            setAccountActionBusy(false);
+        }
+    }
+
+    async function signOutGoogleAccount() {
+        const user = auth.currentUser;
+        if (!user || user.isAnonymous || accountActionBusy) return;
+        if (hasUnsavedChanges()) {
+            alert('저장하지 않은 변경사항이 있습니다. 먼저 하단의 저장 버튼을 눌러 주세요.');
+            return;
+        }
+        if (!confirm('Google 계정에서 로그아웃하시겠습니까?\n\n기록은 Firebase에 보관되며, 나중에 동일한 Google 계정으로 다시 로그인하면 확인할 수 있습니다.')) return;
+        setAccountActionBusy(true);
+        try {
+            await auth.signOut();
+            // 기존 동작처럼 로그아웃 이후 익명 계정으로 시작합니다.
+        } catch (error) {
+            googleAuthError(error);
+        } finally {
+            setAccountActionBusy(false);
+        }
+    }
+
     function init() {
         document.getElementById('week-title').innerText = '인증 중...';
         initTimeWheels();
@@ -274,14 +424,34 @@
         });
 
         auth.onAuthStateChanged(user => {
+            showAccountState(user);
             const weekTitle = document.getElementById('week-title');
+            // 연결만 한 경우에는 UID가 같으므로 기존 화면과 저장 중인 기록을 변경하지 않습니다.
+            if (user && user.uid === boundUid && activeDatabaseRef) return;
+            if (activeDatabaseRef && activeDatabaseCallback) {
+                activeDatabaseRef.off('value', activeDatabaseCallback);
+            }
+            activeDatabaseRef = null;
+            activeDatabaseCallback = null;
+            boundUid = null;
+            cloudData = {};
+            pendingChecks = {};
+            pendingOptions = {};
+            document.getElementById('day-grid').innerHTML = '';
+            document.getElementById('task-card').innerHTML = '';
+
             if (user) {
+                boundUid = user.uid;
                 weekTitle.innerText = '데이터 연결 중...';
-                db.ref(`users/${user.uid}/tracker_data`).on('value', snapshot => {
+                activeDatabaseRef = db.ref(`users/${user.uid}/tracker_data`);
+                activeDatabaseCallback = snapshot => {
+                    // 이전 계정 구독의 뒤늦은 이벤트가 현재 계정 데이터를 덮어쓰지 않도록 방지합니다.
+                    if (boundUid !== user.uid) return;
                     cloudData = snapshot.val() || {};
                     if (document.getElementById('day-grid').innerHTML === '') setWeek(1);
                     else renderGrid();
-                }, error => {
+                };
+                activeDatabaseRef.on('value', activeDatabaseCallback, error => {
                     console.error('Realtime Database 읽기 오류:', error);
                     weekTitle.innerText = '데이터 연결 실패';
                     alert('데이터를 불러오지 못했습니다.\n\nFirebase Realtime Database 규칙과 인터넷 연결을 확인해 주세요.');
@@ -662,6 +832,10 @@
     }
 
     function saveToCloud() {
+        if (!auth.currentUser || accountActionBusy) {
+            alert('로그인 상태를 확인한 후 다시 저장해 주세요.');
+            return;
+        }
         const checkPatch = {...pendingChecks};
         const optionPatch = {...pendingOptions};
         const patch = {...checkPatch, ...optionPatch};
@@ -687,6 +861,7 @@
     }
 
     function resetAllData() {
+        if (!auth.currentUser || accountActionBusy) return;
         const ok = confirm('1일차부터 28일차까지의 모든 체크 기록, 변경한 시간과 운동 설정을 삭제하고 초기화하시겠습니까?\n\n삭제한 기록은 복구할 수 없습니다.');
         if (!ok) return;
         setActionButtonsDisabled(true);
