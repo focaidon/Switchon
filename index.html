@@ -80,7 +80,10 @@ num,.num,.task-time,.ring-number,.metric-number,.day-number,.week-progress-capti
 .overall-progress-track{height:9px;width:100%;border-radius:100px;background:#E2E8F0;overflow:hidden}
 .overall-progress-fill{height:100%;width:0;border-radius:100px;background:linear-gradient(90deg,#34D399,#10B981);transition:width .25s ease}
 .header-info{font-size:11px;color:var(--muted);white-space:nowrap}
-@media (min-width:1024px) and (max-width:1300px){.desktop-page-header .header-info{display:none}.overall-progress{min-width:125px;margin-left:6px}}
+.jump-current-btn{display:inline-flex;align-items:center;gap:4px;border:1px solid #A7F3D0;background:var(--mint);color:var(--primary-deep);border-radius:999px;padding:6px 11px;font-size:12px;font-weight:800;white-space:nowrap;flex:none;font-variant-numeric:tabular-nums;transition:background .15s,color .15s,border-color .15s}
+.jump-current-btn:hover:not(:disabled){background:var(--primary);border-color:var(--primary);color:#fff}
+.jump-current-btn:disabled{background:#F8FAFC;border-color:var(--line);color:#94A3B8;opacity:1;cursor:default}
+@media (min-width:1024px) and (max-width:1360px){.desktop-page-header .header-info{display:none}.overall-progress{min-width:125px;margin-left:6px}}
 .date-strip{display:flex;align-items:center;gap:9px;margin-bottom:20px}
 .calendar-nav{width:30px;height:34px;display:grid;place-items:center;background:#fff;border:1px solid var(--line);border-radius:9px;color:#475569;flex:none}
 .calendar-nav .i{width:16px;height:16px}
@@ -190,7 +193,7 @@ body.modal-open{overflow:hidden}
 .fasting-date-row p{font-size:11px;color:var(--muted);margin:10px 0 0;line-height:1.5}
 .fasting-delete-btn{display:block;margin:11px auto 0;padding:9px 12px;font-size:12px;font-weight:750;color:#B91C1C;background:transparent;border:0;text-decoration:underline;text-underline-offset:3px}
 .dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:17px}.secondary-btn{background:#F1F5F9;color:#334155;border:0;border-radius:9px;padding:9px 14px;font-size:12px;font-weight:750}
-@media(max-width:1230px) and (min-width:1024px){.app-layout{grid-template-columns:232px minmax(0,1fr) 270px;gap:14px;padding:16px 12px}.day-grid{gap:5px}.day-card{min-height:86px}.task-row{gap:7px;padding-left:6px;padding-right:6px;grid-template-columns:55px minmax(0,1fr) 24px}.routine-heading{padding:17px 13px}.schedule-banner{font-size:11px;padding:5px 9px}.task-list{margin:0 12px 8px}.right-sidebar .card{padding:15px}}
+@media(max-width:1230px) and (min-width:1024px){.app-layout{grid-template-columns:232px minmax(0,1fr) 270px;gap:14px;padding:16px 12px}.day-grid{gap:5px}.day-card{min-height:86px}.task-row{gap:7px;padding-left:6px;padding-right:6px;grid-template-columns:55px minmax(0,1fr) 24px}.routine-heading{padding:17px 13px}.schedule-banner{font-size:11px;padding:5px 9px}.jump-current-btn{font-size:11px;padding:5px 9px}.task-list{margin:0 12px 8px}.right-sidebar .card{padding:15px}}
 /* 데스크톱 좌측 사이드바: 노트북 높이에서도 공복 위젯이 보이도록 밀도를 조정합니다. */
 @media (min-width:1024px) and (max-height:820px){
  .app-layout{padding-top:14px}
@@ -237,6 +240,9 @@ body.modal-open{overflow:hidden}
  .mobile-head-actions{display:flex;gap:8px;align-items:center}
  .mobile-head-actions button{width:32px;height:32px;display:grid;place-items:center;color:#64748B;background:transparent;border:0;padding:3px;border-radius:9px}
  .mobile-head-actions button:hover{background:#F1F5F9}
+ .mobile-head-actions .jump-current-btn{width:auto;height:auto;display:inline-flex;padding:5px 9px;font-size:11px;border-radius:999px;border:1px solid #A7F3D0;background:var(--mint);color:var(--primary-deep)}
+ .mobile-head-actions .jump-current-btn:hover:not(:disabled){background:var(--primary);border-color:var(--primary);color:#fff}
+ .mobile-head-actions .jump-current-btn:disabled{background:#F8FAFC;border-color:var(--line);color:#94A3B8}
  .mobile-sub-row{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-top:9px}
  .mobile-week-select{appearance:none;max-width:58%;min-width:0;background:#F1F5F9;border:0;border-radius:8px;color:#334155;padding:8px 26px 8px 10px;font-size:11px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
  .select-wrap{position:relative;display:flex;max-width:59%;min-width:0}
@@ -308,7 +314,7 @@ body.modal-open{overflow:hidden}
  .tab-section-title{font-size:18px;font-weight:850;margin:10px 0 15px;display:block}
  .toast{bottom:calc(78px + env(safe-area-inset-bottom))}
  }
-@media(max-width:375px){.mobile-water .drop-btn .i{width:11px;height:17px}.mobile-water .water-add{width:19px;height:19px}.mobile-water .water-add .i{width:12px;height:12px}.main-column{padding:0 10px}.mobile-header,.mobile-progress{margin-left:-10px;margin-right:-10px}.mobile-summary{gap:8px}.mobile-summary .card{padding:10px}.date-strip{margin-left:-10px;margin-right:-10px;padding:0 10px}.mobile-summary .ring{width:86px;height:86px}.task-list{margin-left:8px;margin-right:8px}.task-row{grid-template-columns:46px minmax(0,1fr) 23px;gap:4px;padding-left:4px;padding-right:4px}.task-detail{font-size:12px}.task-category{font-size:12px;min-width:61px;min-height:30px;padding:6px 5px;gap:3px}.task-category-icon{font-size:14px}.right-sidebar,.mobile-account-view{padding:0 10px}}
+@media(max-width:375px){.mobile-head-row .brand{font-size:16px}.mobile-head-actions{gap:4px}.mobile-head-actions .jump-current-btn{padding:4px 7px;font-size:10px}.mobile-water .drop-btn .i{width:11px;height:17px}.mobile-water .water-add{width:19px;height:19px}.mobile-water .water-add .i{width:12px;height:12px}.main-column{padding:0 10px}.mobile-header,.mobile-progress{margin-left:-10px;margin-right:-10px}.mobile-summary{gap:8px}.mobile-summary .card{padding:10px}.date-strip{margin-left:-10px;margin-right:-10px;padding:0 10px}.mobile-summary .ring{width:86px;height:86px}.task-list{margin-left:8px;margin-right:8px}.task-row{grid-template-columns:46px minmax(0,1fr) 23px;gap:4px;padding-left:4px;padding-right:4px}.task-detail{font-size:12px}.task-category{font-size:12px;min-width:61px;min-height:30px;padding:6px 5px;gap:3px}.task-category-icon{font-size:14px}.right-sidebar,.mobile-account-view{padding:0 10px}}
 </style>
 </head>
 <body data-mobile-tab="today">
@@ -359,6 +365,7 @@ body.modal-open{overflow:hidden}
       <div class="mobile-head-row">
         <div class="brand"><span class="brand-mark"></span>스위치온 체크</div>
         <div class="mobile-head-actions">
+          <button type="button" id="mobile-jump-current" class="jump-current-btn" onclick="jumpToCurrentDay()" disabled>진행 중</button>
           <button type="button" aria-label="내 정보" onclick="switchMobileTab('account')"><svg class="i"><use href="#ic-user"/></svg></button>
           <button type="button" aria-label="계정 설정" onclick="openMobileAccountSettings()"><svg class="i"><use href="#ic-settings"/></svg></button>
         </div>
@@ -386,6 +393,7 @@ body.modal-open{overflow:hidden}
           <div class="overall-progress-line"><span class="overall-progress-name">전체 진행도</span><span id="overall-progress-details" class="overall-progress-details">0/221항목 · 0/28일 완료</span><strong id="overall-progress-percent" class="overall-progress-percent">0%</strong></div>
           <div id="overall-progress-track" class="overall-progress-track" role="progressbar" aria-label="전체 루틴 완료율" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="overall-progress-fill" class="overall-progress-fill"></div></div>
         </div>
+        <button type="button" id="desktop-jump-current" class="jump-current-btn" onclick="jumpToCurrentDay()" disabled>진행 중</button>
         <span class="header-info">주차별 루틴 체크리스트</span>
       </div>
       <div class="date-strip"><button type="button" class="calendar-nav" id="day-prev" aria-label="이전 날짜" onclick="navigateDay(-1)"><svg class="i"><use href="#ic-arrow-left"/></svg></button><div id="day-grid" class="day-grid" aria-label="1주일 날짜 선택"></div><button type="button" id="day-next" class="calendar-nav" aria-label="다음 날짜" onclick="navigateDay(1)"><svg class="i"><use href="#ic-arrow-right"/></svg></button></div>
@@ -953,6 +961,36 @@ body.modal-open{overflow:hidden}
         }));
     }
 
+    function jumpToCurrentDay(){
+      const pos=findLastCheckedPosition();
+      const targetDay=pos?pos.day:1;
+      if(document.body.dataset.mobileTab!=='today')switchMobileTab('today');
+      curD=targetDay;
+      curW=Math.ceil(curD/7);
+      setWeek(curW,false);
+      if(pos)focusLastCheckedRow(pos);
+      else if(window.matchMedia('(max-width:1023px)').matches)document.getElementById('day-grid').scrollLeft=0;
+    }
+
+    function renderJumpCurrentButtons(){
+      const pos=findLastCheckedPosition();
+      const targetDay=pos?pos.day:1;
+      const desktop=document.getElementById('desktop-jump-current');
+      const mobile=document.getElementById('mobile-jump-current');
+      if(desktop){
+        const away=curD!==targetDay;
+        desktop.disabled=!away;
+        desktop.textContent=away?`진행 중 · Day ${targetDay}`:'진행 중';
+        desktop.setAttribute('aria-label',away?`현재 진행 중인 Day ${targetDay}로 이동`:`현재 진행 중인 Day ${targetDay}을 보고 있습니다`);
+      }
+      if(mobile){
+        const away=curD!==targetDay||document.body.dataset.mobileTab!=='today';
+        mobile.disabled=!away;
+        mobile.textContent=away?`진행 중 D${targetDay}`:'진행 중';
+        mobile.setAttribute('aria-label',away?`현재 진행 중인 Day ${targetDay}로 이동`:`현재 진행 중인 Day ${targetDay}을 보고 있습니다`);
+      }
+    }
+
     function renderGrid(){
       const grid=document.getElementById('day-grid');
       grid.innerHTML='';
@@ -1511,6 +1549,7 @@ function renderWeekChrome(){
     const pct=Math.floor(within/7*100);
     return `<button type="button" class="week-nav-btn ${selected?'active':''}" aria-current="${selected?'step':'false'}" onclick="setWeek(${w})"><span class="week-label">${w}주차: ${weekNames[w]}</span>${selected?`<span class="week-meter"><span class="week-meter-inner" style="display:block;width:${pct}%"></span></span><span class="week-progress-caption">Day ${within} / 7 · ${pct}% 진행</span>`:`<span class="week-sub">${w<curW?'지난 주차':'주차 선택'}</span>`}</button>`;
   }).join('');
+  renderJumpCurrentButtons();
 }
 
 
@@ -1527,6 +1566,7 @@ function switchMobileTab(tab){
     button.classList.toggle('active',active);
     button.setAttribute('aria-current',active?'page':'false');
   });
+  renderJumpCurrentButtons();
   window.scrollTo({top:0,behavior:'instant'});
 }
 function openMobileAccountSettings(){
